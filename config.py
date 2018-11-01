@@ -27,10 +27,12 @@ class Config(object):
     # Vault
     USE_VAULT = False
 
-    # Theme support
-    # if active then the theme folder has to exist as /static/<THEME_NAME>
-    THEME_ACTIVE = True
-    THEME_NAME = "default"
+    # THEME SUPPORT
+    #  if set then url_for('static', filename='', theme='')
+    #  will add the theme name to the static URL:
+    #    /static/<DEFAULT_THEME>/filename
+    DEFAULT_THEME = "themes/dark"
+    # DEFAULT_THEME = None
 
 
 class DebugConfig(Config):

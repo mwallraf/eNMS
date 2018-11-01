@@ -7,6 +7,7 @@ from hvac import Client as VaultClient
 from importlib import import_module
 from logging import basicConfig, DEBUG, info, StreamHandler
 from logging.handlers import RotatingFileHandler
+from os import path
 
 auth = HTTPBasicAuth()
 db = SQLAlchemy(
@@ -126,15 +127,16 @@ def apply_themes(app):
     """
     Add support for themes.
 
-    Enable THEME_ACTIVE in the config and set a THEME_NAME.
-    All calls to url_for('static', filename='') will modfify
-      the url to include the theme name
+    If DEFAULT_THEME is set then all calls to
+      url_for('static', filename='')
+      will modfify the url to include the theme name
 
-    If you provide the theme parameter directly in url_for then it will
-      override the default settings:
-    ex. url_for('static', filename='', theme='')
+    The theme parameter can be set directly in url_for as well:
+      ex. url_for('static', filename='', theme='')
 
-    The theme folder name should exist in each /static folder of each blueprint
+    If the file cannot be found in the /static/<theme>/ lcation then
+      the url will not be modified and the file is expected to be
+      in the default /static/ location
     """
     @app.context_processor
     def override_url_for():
@@ -142,15 +144,13 @@ def apply_themes(app):
 
     def _generate_url_for_theme(endpoint, **values):
         if endpoint.endswith('static'):
-            filename = values.get('filename', '')
-            themename = values.get('theme', None)
-            if not themename:
-                if app.config.get('THEME_ACTIVE', False) and \
-                        app.config.get('THEME_NAME', None):
-                    themename = app.config.get('THEME_NAME')
+            themename = values.get('theme', None) or \
+                app.config.get('DEFAULT_THEME', None)
             if themename:
-                filename = "{}/{}".format(themename, filename)
-                values['filename'] = filename
+                theme_file = "{}/{}".format(themename, values.get('filename', ''))
+                if path.isfile(path.join(app.static_folder, theme_file)):
+                    values['filename'] = theme_file
+            print("new url = {}".format(url_for(endpoint, **values)))
         return url_for(endpoint, **values)
 
 
