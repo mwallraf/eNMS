@@ -1,8 +1,8 @@
-property1:
-  pretty_name: Property 1
-  type: integer
-  default: 4
-property2:
-  pretty_name: Property 2
+siteid:
+  pretty_name: SiteID
   type: string
-  default: "a"
+  default: ""
+facts:
+  pretty_name: Facts
+  type: string
+  default: "{}"
