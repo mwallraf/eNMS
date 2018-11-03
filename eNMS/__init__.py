@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, render_template
 from flask_apscheduler import APScheduler
 from flask_httpauth import HTTPBasicAuth
 from flask_login import LoginManager
@@ -7,7 +7,7 @@ from hvac import Client as VaultClient
 from importlib import import_module
 from logging import basicConfig, DEBUG, info, StreamHandler
 from logging.handlers import RotatingFileHandler
-from contrib.themes import apply_themes
+from eNMS.contrib.themes import apply_themes
 
 auth = HTTPBasicAuth()
 db = SQLAlchemy(
