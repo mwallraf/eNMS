@@ -79,6 +79,28 @@ def create_default_services():
             'hidden': True
         },
         {
+            'type': 'swiss_army_knife_service',
+            'name': 'mail_feedback_notification',
+            'description': 'Mail notification (service logs)'
+        },
+        {
+            'type': 'swiss_army_knife_service',
+            'name': 'slack_feedback_notification',
+            'description': 'Slack notification (service logs)'
+        },
+        {
+            'type': 'swiss_army_knife_service',
+            'name': 'mattermost_feedback_notification',
+            'description': 'Mattermost notification (service logs)'
+        }
+    ):
+        factory(service.pop('type'), **service)
+
+
+@integrity_rollback
+def create_example_services():
+    for service in (
+        {
             'type': 'configure_bgp_service',
             'name': 'napalm_configure_bgp_1',
             'description': 'Configure BGP Peering with Napalm',
@@ -90,7 +112,7 @@ def create_default_services():
             'remote_as': 200,
             'vrf_name': 'configure_BGP_test',
             'waiting_time': 0
-        }
+        },
     ):
         factory(service.pop('type'), **service)
 
@@ -111,7 +133,8 @@ def create_netmiko_workflow():
             'global_delay_factor': '1.0',
             'content': 'vrf definition test',
             'enable_mode': 'y',
-            'fast_cli': 'y'
+            'fast_cli': 'y',
+            'timeout': 3
         },
         {
             'type': 'netmiko_validation_service',
@@ -124,7 +147,8 @@ def create_netmiko_workflow():
             'driver': 'arista_eos',
             'command': 'show vrf',
             'content_match': 'test',
-            'fast_cli': 'y'
+            'fast_cli': 'y',
+            'timeout': 3
         },
         {
             'type': 'netmiko_configuration_service',
@@ -138,7 +162,8 @@ def create_netmiko_workflow():
             'global_delay_factor': '1.0',
             'content': 'no vrf definition test',
             'enable_mode': 'y',
-            'fast_cli': 'y'
+            'fast_cli': 'y',
+            'timeout': 3
         },
         {
             'type': 'netmiko_validation_service',
@@ -153,6 +178,7 @@ def create_netmiko_workflow():
             'content_match': '^((?!test).)*$',
             'content_match_regex': 'y',
             'fast_cli': 'y',
+            'timeout': 3,
             'number_of_retries': 2,
             'time_between_retries': 1
         },
@@ -304,7 +330,7 @@ def create_payload_transfer_workflow():
 
 def create_default_examples(app):
     create_default_network_topology(app),
-    create_default_services()
+    create_example_services()
     create_netmiko_workflow()
     create_napalm_workflow()
     create_payload_transfer_workflow()

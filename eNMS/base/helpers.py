@@ -29,9 +29,10 @@ def objectify(model, object_list):
 
 def delete(model, **kwargs):
     instance = db.session.query(classes[model]).filter_by(**kwargs).first()
+    result = instance.serialized
     db.session.delete(instance)
     db.session.commit()
-    return instance.serialized
+    return result
 
 
 def serialize(model):
@@ -90,18 +91,34 @@ def permission_required(permission, redirect=True):
     return decorator
 
 
-def route_function(method):
-    def route(blueprint, url, permission=None, method=method):
-        def outer(func):
-            @blueprint.route(url, methods=[method])
-            @login_required
-            @permission_required(permission, redirect=(method == 'GET'))
-            @wraps(func)
-            def inner(*args, **kwargs):
+def get(blueprint, url, permission=None, method=['GET']):
+    def outer(func):
+        @blueprint.route(url, methods=method)
+        @login_required
+        @permission_required(permission)
+        @wraps(func)
+        def inner(*args, **kwargs):
+            return func(*args, **kwargs)
+        return inner
+    return outer
+
+
+def post(blueprint, url, permission=None, method=['POST']):
+    def outer(func):
+        @blueprint.route(url, methods=method)
+        @login_required
+        @permission_required(permission, redirect=False)
+        @wraps(func)
+        def inner(*args, **kwargs):
+            try:
                 return func(*args, **kwargs)
-            return inner
-        return outer
-    return route
+            except Exception as e:
+                error = str(e)
+                if error == 'Expecting value: line 1 column 1 (char 0)':
+                    error = 'Invalid syntax for dictionnary input.'
+                return jsonify({'failure': True, 'error': error})
+        return inner
+    return outer
 
 
 def str_dict(input, depth=0):
@@ -118,6 +135,3 @@ def str_dict(input, depth=0):
         return result
     else:
         return str(input)
-
-
-get, post = route_function('GET'), route_function('POST')

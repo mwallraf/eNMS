@@ -15,20 +15,24 @@ from eNMS.admin import bp
 from eNMS.admin.forms import (
     AddUser,
     CreateAccountForm,
-    LoginForm,
+    DatabaseFilteringForm,
     GeographicalParametersForm,
     GottyParametersForm,
+    LoginForm,
+    NotificationParametersForm,
     SyslogServerForm,
     TacacsServerForm,
 )
 from eNMS.base.models import classes
 from eNMS.base.helpers import (
+    choices,
     delete,
     get,
     get_one,
     post,
     factory,
     fetch,
+    fetch_all,
     serialize
 )
 from eNMS.base.properties import pretty_names, user_public_properties
@@ -76,6 +80,8 @@ def logout():
 
 @get(bp, '/administration', 'Admin Section')
 def admninistration():
+    database_filtering_form = DatabaseFilteringForm(request.form)
+    database_filtering_form.pool.choices = choices('Pool')
     try:
         tacacs_server = get_one('TacacsServer')
     except NoResultFound:
@@ -86,8 +92,10 @@ def admninistration():
         syslog_server = None
     return render_template(
         'administration.html',
+        database_filtering_form=database_filtering_form,
         geographical_parameters_form=GeographicalParametersForm(request.form),
         gotty_parameters_form=GottyParametersForm(request.form),
+        notification_parameters_form=NotificationParametersForm(request.form),
         parameters=get_one('Parameters'),
         tacacs_form=TacacsServerForm(request.form),
         syslog_form=SyslogServerForm(request.form),
@@ -147,5 +155,23 @@ def save_geographical_parameters():
 @post(bp, '/save_gotty_parameters', 'Edit parameters')
 def save_gotty_parameters():
     get_one('Parameters').update(**request.form.to_dict())
+    db.session.commit()
+    return jsonify(True)
+
+
+@post(bp, '/save_notification_parameters', 'Edit parameters')
+def save_notification_parameters():
+    get_one('Parameters').update(**request.form.to_dict())
+    db.session.commit()
+    return jsonify(True)
+
+
+@post(bp, '/database_filtering', 'Edit parameters')
+def database_filtering():
+    pool = fetch('Pool', id=request.form['pool'])
+    pool_objects = {'Device': pool.devices, 'Link': pool.links}
+    for obj_type in ('Device', 'Link'):
+        for obj in fetch_all(obj_type):
+            setattr(obj, 'hidden', obj not in pool_objects[obj_type])
     db.session.commit()
     return jsonify(True)

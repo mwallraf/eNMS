@@ -210,5 +210,44 @@ Run multiple services
 ---------------------
 
 - Service instance tasks will run in parallel to other service instance tasks as long as they are standalone and do not exist within a workflow.
-- Service Instance tasks (and workflow instance tasks) that exist inside of a workflow will run in sequential order as defined in the workflow builder.
+- Service Instance (and workflows) that exist inside of a workflow will run in sequential order as defined in the workflow builder.
 - If multiple inventory devices are selected within the individual service instance definitions (but not at the workflow instance level, since that overrides any devices selected for the individual service instances), these will run in parallel.
+
+Retry mechanism
+---------------
+
+Each service can be configured to run again in case of failures.
+There are two parameters to configure:
+
+- The number of retries (default: 0)
+- The time between retries (default: 10 seconds)
+
+.. note:: The retry will affect only the devices for which the service failed. Let's consider a service configured to run on 3 devices D1, D2, and D3 with 2 "retries". If it fails on D2 and D3 when the service runs for the first time, eNMS will run the service again for D2 and D3 at the first retry. If D2 succeeds and D3 fails, the second and last retry will run on D3 only.
+
+Service notification
+--------------------
+
+When a service (or a workflow) finishes, you can choose to receive a notification that contains the logs of the service (whether it was successful or not for each device, etc).
+
+There are three types of notification:
+- Mail notification: eNMS sends a mail to an address of your choice.
+- Slack notification: eNMS sends a message to a channel of your choice.
+- Mattermost notification: same as Slack, with Mattermost.
+
+To set up the mail system, you must export the following environment variables before starting eNMS:
+
+::
+
+  MAIL_SERVER = environ.get('MAIL_SERVER', 'smtp.googlemail.com')
+  MAIL_PORT = int(environ.get('MAIL_PORT', '587'))
+  MAIL_USE_TLS = int(environ.get('MAIL_USE_TLS', True))
+  MAIL_USERNAME = environ.get('MAIL_USERNAME')
+  MAIL_PASSWORD = environ.get('MAIL_PASSWORD')
+
+From the :guilabel:`admin/administration` panel, you must configure the sender and recipient addresses of the mail (Mail notification), as well as an Incoming webhook URL and channel for the Mattermost/Slack notifications.
+
+.. image:: /_static/services/service_system/notifications.png
+   :alt: Notification
+   :align: center
+
+The ``Mail Recipients`` parameter must be set for the mail system to work. If the ``Mattermost Channel`` is not set, the default ``Town Square`` will be used.

@@ -28,7 +28,9 @@ def netmiko_connection(service, device):
         username=username,
         password=pwd,
         secret=enable_pwd,
-        fast_cli=service.fast_cli
+        fast_cli=service.fast_cli,
+        timeout=service.timeout,
+        global_delay_factor=service.global_delay_factor
     )
 
 
@@ -62,7 +64,12 @@ def scheduler_job(job_id):
         job.state = 'Running'
         info(f'{job.name}: starting.')
         db.session.commit()
-        job.try_run()
+        results = job.try_run()
         info(f'{job.name}: finished.')
         job.state = 'Idle'
+        if job.send_notification:
+            fetch('Job', name=job.send_notification_method).try_run({
+                'job': job.serialized,
+                'result': results
+            })
         db.session.commit()

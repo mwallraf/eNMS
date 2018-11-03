@@ -3,7 +3,6 @@ from os.path import join
 from simplekml import Kml
 
 from eNMS.base.helpers import (
-    choices,
     fetch,
     fetch_all,
     get,
@@ -23,12 +22,13 @@ from eNMS.views import bp, styles
 from eNMS.views.forms import GoogleEarthForm, ViewOptionsForm
 
 
-@get(bp, '/<view_type>_view', 'Views Section')
+@get(bp, '/<view_type>_view', 'Views Section', ['GET', 'POST'])
 def view(view_type):
     devices = fetch_all('Device')
     add_link_form = AddLink(request.form)
-    add_link_form.source.choices = choices('Device')
-    add_link_form.destination.choices = choices('Device')
+    form_devices = [(l.name, l.name) for l in fetch_all('Device')]
+    add_link_form.source_name.choices = form_devices
+    add_link_form.destination_name.choices = form_devices
     labels = {'device': 'name', 'link': 'name'}
     if 'view_options' in request.form:
         labels = {

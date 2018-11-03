@@ -69,8 +69,9 @@ def device_management():
 @get(bp, '/link_management', 'Inventory Section')
 def link_management():
     add_link_form = AddLink(request.form)
-    add_link_form.source.choices = choices('Device')
-    add_link_form.destination.choices = choices('Device')
+    devices = [(l.name, l.name) for l in fetch_all('Device')]
+    add_link_form.source_name.choices = devices
+    add_link_form.destination_name.choices = devices
     return render_template(
         'link_management.html',
         names=pretty_names,
@@ -231,10 +232,10 @@ def export_topology():
 def migration_export():
     name = request.form['name']
     for cls_name in request.form.getlist('export'):
-        dir_path = app.path / 'migrations' / 'export' / name
-        if not exists(dir_path):
-            makedirs(dir_path)
-        with open(dir_path / f'{cls_name}.yaml', 'w') as migration_file:
+        path = app.path / 'migrations' / 'import_export' / name
+        if not exists(path):
+            makedirs(path)
+        with open(path / f'{cls_name}.yaml', 'w') as migration_file:
             dump(export(cls_name), migration_file, default_flow_style=False)
     return jsonify(True)
 
@@ -243,7 +244,7 @@ def migration_export():
 def migration_import():
     name = request.form['name']
     for cls in request.form.getlist('export'):
-        path = app.path / 'migrations' / 'export' / name / f'{cls}.yaml'
+        path = app.path / 'migrations' / 'import_export' / name / f'{cls}.yaml'
         with open(path, 'r') as migration_file:
             for obj_data in load(migration_file):
                 cls_name = obj_data.pop('type') if cls == 'Service' else cls

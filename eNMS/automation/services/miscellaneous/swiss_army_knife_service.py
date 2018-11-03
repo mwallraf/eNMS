@@ -1,6 +1,11 @@
+from flask_mail import Message
+from json import dumps
+from requests import post
 from sqlalchemy import Boolean, Column, ForeignKey, Integer
 
+from eNMS import mail
 from eNMS.automation.models import Service
+from eNMS.base.helpers import get_one, str_dict
 from eNMS.base.models import service_classes
 
 
@@ -32,6 +37,28 @@ class SwissArmyKnifeService(Service):
 
     def End(self, *a, **kw):  # noqa: N802
         # End of a workflow
+        return {'success': True}
+
+    def mail_feedback_notification(self, payload):
+        parameters = get_one('Parameters')
+        message = Message(
+            payload['job']['name'],
+            sender=parameters.mail_sender,
+            recipients=parameters.mail_recipients.split(','),
+            body=str_dict(payload['result'])
+        )
+        mail.send(message)
+        return {'success': True}
+
+    def slack_feedback_notification(self, payload):
+        pass
+
+    def mattermost_feedback_notification(self, payload):
+        parameters = get_one('Parameters')
+        post(parameters.mattermost_url, data=dumps({
+            "channel": parameters.mattermost_channel,
+            "text": str_dict(payload['result'])
+        }))
         return {'success': True}
 
     def process_payload1(self, device, payload):

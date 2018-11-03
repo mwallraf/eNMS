@@ -20,7 +20,7 @@ sql_types = {
 }
 
 custom_properties = get_custom_properties()
-boolean_properties = ['multiprocessing']
+boolean_properties = ['multiprocessing', 'send_notification']
 
 base_properties = [
     'id',
@@ -123,7 +123,9 @@ job_public_properties = [
     'positions',
     'waiting_time',
     'number_of_retries',
-    'time_between_retries'
+    'time_between_retries',
+    'send_notification',
+    'send_notification_method'
 ]
 
 service_public_properties = job_public_properties
@@ -257,7 +259,7 @@ object_diagram_properties = [
 device_diagram_properties = object_diagram_properties + [
     'operating_system',
     'os_version'
-]
+] + list(p for p, v in custom_properties.items() if v['add_to_dashboard'])
 
 user_diagram_properties = [
     'name',
@@ -342,7 +344,7 @@ pretty_names = {
 pretty_names.update({k: v['pretty_name'] for k, v in custom_properties.items()})
 reverse_pretty_names = {v: k for k, v in pretty_names.items()}
 service_properties = defaultdict(list)
-property_types = {}
+property_types = {'send_notification': bool}
 
 serialization_properties = {
     'destination': 'Device',

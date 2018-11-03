@@ -56,6 +56,9 @@ class Job(Base):
         secondary=job_log_rule_table,
         back_populates='jobs'
     )
+    send_notification = Column(Boolean, default=False)
+    send_notification_method = Column(String)
+    mail_recipient = Column(String)
 
     __mapper_args__ = {
         'polymorphic_identity': 'Job',
@@ -71,19 +74,21 @@ class Job(Base):
     def job_sources(self, workflow, type='all'):
         return [
             x.source for x in self.sources
-            if (type == 'all' or x.type == type) and x.workflow == workflow
+            if (type == 'all' or x.type == type)
+            and x.workflow == workflow
         ]
 
     def job_successors(self, workflow, type='all'):
         return [
             x.destination for x in self.destinations
-            if (type == 'all' or x.type == type) and x.workflow == workflow
+            if (type == 'all' or x.type == type)
+            and x.workflow == workflow
         ]
 
-    def try_run(self, payload=None, targets=None):
+    def try_run(self, payload=None, remaining_targets=None):
         failed_attempts = {}
         for i in range(self.number_of_retries + 1):
-            results = self.run(payload, targets)
+            results, remaining_targets = self.run(payload, remaining_targets)
             if results['success']:
                 break
             if i != self.number_of_retries:
@@ -100,31 +105,31 @@ class Job(Base):
             return {'success': False, 'result': str(e)}
 
     def run(self, payload=None, targets=None):
-        results = {'success': True, 'result': {'devices': {}}}
         if not targets:
             targets = self.compute_targets()
-        if self.multiprocessing:
-            pool = ThreadPool(processes=min(len(targets), 1))
-            pool.map(
-                self.device_run,
-                [(device, results, payload) for device in targets]
-            )
-            pool.close()
-            pool.join()
-        else:
-            if targets:
+        if targets:
+            results = {'result': {'devices': {}}}
+            if self.multiprocessing:
+                pool = ThreadPool(processes=min(len(targets), 1))
+                pool.map(
+                    self.device_run,
+                    [(device, results, payload) for device in targets]
+                )
+                pool.close()
+                pool.join()
+            else:
                 results['result']['devices'] = {
                     device.name: self.get_results(payload, device)
                     for device in targets
                 }
-            else:
-                results = self.get_results(payload)
-        if any(
-            not results['result']['devices'][device.name]['success']
-            for device in targets
-        ):
-            results['success'] = False
-        return results
+            remaining_targets = {
+                device for device in targets
+                if not results['result']['devices'][device.name]['success']
+            }
+            results['success'] = not bool(remaining_targets)
+            return results, remaining_targets
+        else:
+            return self.get_results(payload), None
 
     def device_run(self, args):
         device, results, payload = args
@@ -229,9 +234,7 @@ class Workflow(Job):
             job = jobs.pop()
             # We check that all predecessors of the job have been visited
             # to ensure that the job will receive the full payload.
-            # If it isn't the case, we put it back in the heap and move on to
-            # another job.
-            if any(n not in visited for n in job.job_sources(self)):
+            if any(node not in visited for node in job.job_sources(self)):
                 continue
             visited.add(job)
             if not self.multiprocessing:

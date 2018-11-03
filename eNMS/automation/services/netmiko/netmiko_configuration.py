@@ -15,13 +15,13 @@ class NetmikoConfigurationService(Service):
 
     id = Column(Integer, ForeignKey('Service.id'), primary_key=True)
     multiprocessing = True
-    operating_system = Column(String)
     content = Column(String)
     content_textarea = True
     driver = Column(String)
     driver_values = NETMIKO_DRIVERS
     enable_mode = Column(Boolean)
     fast_cli = Column(Boolean, default=False)
+    timeout = Column(Integer, default=1.)
     global_delay_factor = Column(Float, default=1.)
 
     __mapper_args__ = {
