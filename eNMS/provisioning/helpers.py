@@ -3,7 +3,7 @@ from jinja2 import meta
 
 
 def get_template_vars(templatename, ignorevars=[], sort=True, maxnestlevels=100):
-    """Return a list of all variables found in the template
+    """Return a list of all variables found in a Jinja template
 
 
     Arguments:

@@ -4,14 +4,37 @@
 
 {% block stylesheets %}
   {{ super() }}
+  <style>
+mark{
+    background: orange;
+    color: black;
+}
+  </style>
+
 {% endblock stylesheets %}
 
 {% block content %}
   <div class="right_col" role="main">
 
-<pre>
-{{ rendering_result }}
-</pre>
+<div id="rendered">
+  <pre>
+  {{ rendering_result }}
+  </pre>
+</div>
 
   </div>
 {% endblock content %}
+
+
+{% block javascripts %}
+  {{ super() }}
+
+  <!-- Mark.js -->
+  <script src="{{ url_for('static', filename='mark.js/jquery.mark.min.js') }}"></script>
+
+  <script>
+  $("#rendered").mark( [ "blablabla", "name" ] );
+</script>
+
+{% endblock %}
+
