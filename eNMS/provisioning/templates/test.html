@@ -1,0 +1,17 @@
+{% extends "base_site.html" %}
+
+{% block title %} Provisioning Test Page {% endblock title %}
+
+{% block stylesheets %}
+  {{ super() }}
+{% endblock stylesheets %}
+
+{% block content %}
+  <div class="right_col" role="main">
+
+<pre>
+{{ rendering_result }}
+</pre>
+
+  </div>
+{% endblock content %}

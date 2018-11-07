@@ -49,7 +49,8 @@ def register_blueprints(app):
         'logs',
         'objects',
         'scheduling',
-        'views'
+        'views',
+        'provisioning'
     )
     for blueprint in blueprints:
         module = import_module(f'eNMS.{blueprint}')
