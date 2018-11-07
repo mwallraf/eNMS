@@ -25,13 +25,9 @@ class Config(object):
     GOTTY_SERVER_ADDR = environ.get('GOTTY_SERVER_ADDR')
     GOTTY_BYPASS_KEY_PROMPT = environ.get('GOTTY_BYPASS_KEY_PROMPT')
 
-    # THEME SUPPORT
-    #  if set then url_for('static', filename='', theme='')
-    #  will add the theme name to the static URL:
-    #    /static/<DEFAULT_THEME>/filename
-    DEFAULT_THEME = "themes/dark"
-    # DEFAULT_THEME = None
-    
+    # THEME SUPPORT (ex themes/dark)
+    DEFAULT_THEME = environ.get('DEFAULT_THEME', None)
+
     # Vault
     USE_VAULT = False
 
