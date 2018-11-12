@@ -1,5 +1,44 @@
-from flask import current_app as app
+from flask import current_app as app, render_template
 from jinja2 import meta
+
+
+def get_all_snippets(bp):
+    """Return a list of templates as a dict:
+       {
+            'template': { 'template': '' }
+       }
+
+       Maybe the templates will be stored in DB later so for 
+       now we already reaturn the templates as a string that
+       can be rendered as render_template_string()
+    """
+    result = {}
+
+    loader = bp.jinja_loader
+    env = app.jinja_env
+
+    if loader is not None:
+        result = { template: { 'template': get_template(env, template), 'vars': get_template_vars(template)} for template in loader.list_templates() if _is_valid_snippet(template) }
+    return result
+
+
+def _is_valid_snippet(tpl):
+    """Check if the snippet can be used as a template
+    """
+    if 'snippets' not in tpl:
+        return False
+    if not tpl.endswith("j2"):
+        return False
+    if tpl.startswith("."):
+        return False
+    return True
+
+def get_template(env, tpl):
+    """Return the source of a template
+    """
+    #print(tpl)
+    tplsrc = env.loader.get_source(env, tpl)[0]
+    return tplsrc
 
 
 def get_template_vars(templatename, ignorevars=[], sort=True, maxnestlevels=100):

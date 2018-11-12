@@ -1,0 +1,31 @@
+<!-- Example single danger button -->
+<div class="row">
+   <div class="col-md-12 col-sm-12 col-xs-12">
+      <div class="x_panel">
+         <div style="height:300px;" class="x_content">
+            <div class="panel-group" >
+               <div style="padding-bottom:5px;">
+
+                  <div class="page-title">
+                     <div class="title_left">
+                        <h3>Select a provisioning template</h3>
+                     </div>
+                  </div>
+
+                  <div class="btn-group">
+                     <button type="button" class="btn btn-secondary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                     Select a configuration template
+                     </button>
+                     <div class="dropdown-menu">
+                        {% for snippet in snippets %}
+                        <a class="dropdown-item" href="#">{{ snippet }}</a>
+                        {% endfor %}
+                     </div>
+                  </div>
+
+               </div>
+            </div>
+         </div>
+      </div>
+   </div>
+</div>
