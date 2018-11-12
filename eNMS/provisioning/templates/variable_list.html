@@ -1,0 +1,15 @@
+        <form id="connection-parameters-form" class="form-horizontal form-label-left" method="post">
+
+          {% for i in snippet_vars %}
+            <div class="item">
+              <input id="accept-once" name="accept-once" type="checkbox" checked="">
+              <label>{{ i }}</label>
+            </div>
+          {% endfor %}
+
+        </form>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-primary" id="connection-button">Connect</button>
+      </div>

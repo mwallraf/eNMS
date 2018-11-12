@@ -1,0 +1,42 @@
+{% extends "base_site.html" %}
+
+{% block title %} Provisioning Test Page {% endblock title %}
+
+{% block stylesheets %}
+  {{ super() }}
+  <style>
+    mark{
+        background: orange;
+        color: black;
+    }
+  </style>
+{% endblock stylesheets %}
+
+{% block content %}
+  <div class="right_col" role="main">
+
+  <!-- template_list pane -->
+  {% include 'template_list.html' %}
+
+  <!-- preview pane -->
+  {% include 'preview.html' %}
+
+  <!-- generated pane -->
+  {% include 'generated.html' %}
+
+  </div>
+{% endblock content %}
+
+
+{% block javascripts %}
+  {{ super() }}
+
+  <!-- Mark.js -->
+  <script src="{{ url_for('static', filename='mark.js/jquery.mark.min.js') }}"></script>
+
+  <script>
+  $("#preview-template").mark();
+</script>
+
+{% endblock %}
+
