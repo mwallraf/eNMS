@@ -8,7 +8,7 @@ from hvac import Client as VaultClient
 from importlib import import_module
 from logging import basicConfig, DEBUG, info, StreamHandler
 from logging.handlers import RotatingFileHandler
-from eNMS.contrib.themes import apply_themes
+from os import environ
 
 auth = HTTPBasicAuth()
 db = SQLAlchemy(
@@ -21,7 +21,10 @@ login_manager = LoginManager()
 mail = Mail()
 scheduler = APScheduler()
 
-from eNMS.base.models import classes
+# Vault
+use_vault = int(environ.get('USE_VAULT', False))
+vault_client = VaultClient()
+
 from eNMS.base.default import (
     create_default_services,
     create_default_parameters,
@@ -29,6 +32,7 @@ from eNMS.base.default import (
     create_default_users,
     create_default_examples
 )
+from eNMS.base.helpers import fetch
 from eNMS.base.rest import configure_rest_api
 
 
@@ -59,24 +63,19 @@ def register_blueprints(app):
 def configure_login_manager(app):
     @login_manager.user_loader
     def user_loader(id):
-        return db.session.query(classes['User']).filter_by(id=id).first()
+        return fetch('User', id=id)
 
     @login_manager.request_loader
     def request_loader(request):
-        name = request.form.get('name')
-        user = db.session.query(classes['User']).filter_by(name=name).first()
-        return user if user else None
+        return fetch('User', name=request.form.get('name'))
 
 
-def create_vault_client(app):
-    client = VaultClient(
-        url=app.config['VAULT_ADDR'],
-        token=app.config['VAULT_TOKEN']
-    )
-    if client.is_sealed() and app.config['UNSEAL_VAULT']:
+def configure_vault_client(app):
+    vault_client.url = app.config['VAULT_ADDR']
+    vault_client.token = app.config['VAULT_TOKEN']
+    if vault_client.sys.is_sealed() and app.config['UNSEAL_VAULT']:
         keys = [app.config[f'UNSEAL_VAULT_KEY{i}'] for i in range(1, 6)]
-        client.unseal_multi(filter(None, keys))
-    return client
+        vault_client.unseal_multi(filter(None, keys))
 
 
 def configure_database(app):
@@ -108,10 +107,6 @@ def configure_errors(app):
     def not_found_error(error):
         return render_template('errors/page_404.html'), 404
 
-    @app.errorhandler(500)
-    def internal_error(error):
-        return render_template('errors/page_500.html'), 500
-
 
 def configure_logs(app):
     basicConfig(
@@ -141,8 +136,7 @@ def create_app(path, config):
     configure_rest_api(app)
     configure_logs(app)
     configure_errors(app)
-    if app.config['USE_VAULT']:
-        app.vault_client = create_vault_client(app)
+    if use_vault:
+        configure_vault_client(app)
     info('eNMS starting')
-    apply_themes(app)
     return app

@@ -8,7 +8,7 @@ from eNMS.automation.helpers import (
     substitute
 )
 from eNMS.automation.models import Service
-from eNMS.base.models import service_classes
+from eNMS.base.classes import service_classes
 
 
 class NapalmGettersService(Service):
@@ -47,7 +47,7 @@ class NapalmGettersService(Service):
     optional_args = Column(MutableDict.as_mutable(PickleType), default={})
 
     __mapper_args__ = {
-        'polymorphic_identity': 'napalm_getters_service',
+        'polymorphic_identity': 'NapalmGettersService',
     }
 
     def job(self, device, payload):
@@ -60,11 +60,11 @@ class NapalmGettersService(Service):
                 result[getter] = f'{getter} failed because of {e}'
         output, match = str(result), substitute(self.content_match, locals())
         success = (
-            self.content_match_regex and search(match, output)
+            self.content_match_regex and bool(search(match, output))
             or match in output and not self.content_match_regex
         )
         napalm_driver.close()
         return {'success': success, 'result': result}
 
 
-service_classes['napalm_getters_service'] = NapalmGettersService
+service_classes['NapalmGettersService'] = NapalmGettersService

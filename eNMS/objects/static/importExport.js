@@ -2,6 +2,7 @@
 global
 alertify: false
 call: false
+doc: false
 fCall: false
 */
 
@@ -10,10 +11,30 @@ document.getElementById('file').onchange = function() {
 };
 
 /**
+ * Query openNMS server.
+ */
+function queryOpenNMS() { // eslint-disable-line no-unused-vars
+  fCall('/admin/query_opennms', '#opennms_form', function() {
+    alertify.notify('Topology imported from OpenNMS.', 'success', 5);
+  });
+}
+
+/**
+ * Query Netbox server.
+ */
+function queryNetbox() { // eslint-disable-line no-unused-vars
+  fCall('/admin/query_netbox', '#netbox_form', function() {
+    alertify.notify('Topology imported from Netbox.', 'success', 5);
+  });
+}
+
+/**
  * Export topology.
  */
 function exportTopology() { // eslint-disable-line no-unused-vars
-  call('/objects/export_topology', function() {});
+  call('/objects/export_topology', function() {
+    alertify.notify('Topology successfully exported.', 'success', 5);
+  });
 }
 
 /**
@@ -31,40 +52,13 @@ function importTopology() { // eslint-disable-line no-unused-vars
       contentType: false,
       processData: false,
       async: false,
-      success: function(objects) {
-        alertify.notify('Adding objects to the table...', 'success', 5);
-        if (!objects) {
-          alertify.notify('HTTP Error 403 – Forbidden', 'error', 5);
-        } else {
-          alertify.notify('Topology successfully imported.', 'success', 5);
-        }
+      success: function(result) {
+        alertify.notify(result, 'success', 5);
       },
     });
   }
 }
 
-/**
- * Export all for migration.
- */
-function migrationExport() { // eslint-disable-line no-unused-vars
-  alertify.notify('Export initiated.', 'success', 5);
-  fCall('/objects/migration_export', '#import-export-form', function() {
-    alertify.notify('Export successful.', 'success', 5);
-  });
-}
-
-/**
- * Export all for migration.
- */
-function migrationImport() { // eslint-disable-line no-unused-vars
-  fCall('/objects/migration_import', '#import-export-form', function() {
-    alertify.notify('Import successful.', 'success', 5);
-  });
-}
-
 (function() {
-  $('#doc-link').attr(
-    'href',
-    'https://enms.readthedocs.io/en/latest/inventory/objects.html'
-  );
+  doc('https://enms.readthedocs.io/en/latest/inventory/objects.html');
 })();

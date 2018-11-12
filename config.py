@@ -20,16 +20,18 @@ class Config(object):
         }
     }
 
+    # ENMS
+    ENMS_SERVER_ADDR = environ.get('ENMS_SERVER_ADDR')
+
     # WebSSH (GoTTY)
     GOTTY_PORT_REDIRECTION = int(environ.get('GOTTY_PORT_REDIRECTION', False))
-    GOTTY_SERVER_ADDR = environ.get('GOTTY_SERVER_ADDR')
     GOTTY_BYPASS_KEY_PROMPT = environ.get('GOTTY_BYPASS_KEY_PROMPT')
 
     # THEME SUPPORT (ex themes/dark)
     DEFAULT_THEME = environ.get('DEFAULT_THEME', None)
 
     # Vault
-    USE_VAULT = False
+    USE_VAULT = int(environ.get('USE_VAULT', False))
 
     # Examples
     CREATE_EXAMPLES = int(environ.get('CREATE_EXAMPLES', True))

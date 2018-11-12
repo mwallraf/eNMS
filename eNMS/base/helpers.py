@@ -1,10 +1,15 @@
-from flask import abort, jsonify
+from flask import abort, jsonify, request, render_template
 from flask_login import current_user, login_required
 from functools import wraps
 from sqlalchemy import exc
 
 from eNMS import db
-from eNMS.base.models import classes
+from eNMS.base.classes import classes
+from eNMS.base.properties import (
+    boolean_properties,
+    pretty_names,
+    property_types
+)
 
 
 def add_classes(*models):
@@ -23,16 +28,31 @@ def fetch_all(model):
     return classes[model].query.all()
 
 
+def fetch_all_visible(model):
+    return [
+        instance for instance in classes[model].query.all()
+        if instance.visible
+    ]
+
+
 def objectify(model, object_list):
     return [fetch(model, id=object_id) for object_id in object_list]
 
 
 def delete(model, **kwargs):
     instance = db.session.query(classes[model]).filter_by(**kwargs).first()
+    if hasattr(instance, 'type') and instance.type == 'Task':
+        instance.delete_task()
     result = instance.serialized
     db.session.delete(instance)
     db.session.commit()
     return result
+
+
+def delete_all(model):
+    for instance in fetch_all(model):
+        delete(model, id=instance.id)
+    db.session.commit()
 
 
 def serialize(model):
@@ -77,6 +97,20 @@ def integrity_rollback(function):
     return wrapper
 
 
+def process_request(function):
+    def wrapper(*a, **kw):
+        data = request.form.to_dict()
+        for key in request.form:
+            if 'list' in property_types.get(key, ''):
+                data[key] = request.form.getlist(key)
+        for property in boolean_properties:
+            if property not in request.form:
+                data[property] = 'off'
+        request.form = data
+        return function(*a, **kw)
+    return wrapper
+
+
 def permission_required(permission, redirect=True):
     def decorator(f):
         @wraps(f)
@@ -91,9 +125,25 @@ def permission_required(permission, redirect=True):
     return decorator
 
 
+def templated(function):
+    @wraps(function)
+    def decorated_function(*args, **kwargs):
+        ctx = function(*args, **kwargs) or {}
+        if not isinstance(ctx, dict):
+            return ctx
+        ctx.update({
+            'names': pretty_names,
+            'property_types': {k: str(v) for k, v in property_types.items()}
+        })
+        endpoint = request.endpoint.split('.')[-1]
+        return render_template(ctx.pop('template', f'{endpoint}.html'), **ctx)
+    return decorated_function
+
+
 def get(blueprint, url, permission=None, method=['GET']):
     def outer(func):
         @blueprint.route(url, methods=method)
+        @templated
         @login_required
         @permission_required(permission)
         @wraps(func)
@@ -103,12 +153,13 @@ def get(blueprint, url, permission=None, method=['GET']):
     return outer
 
 
-def post(blueprint, url, permission=None, method=['POST']):
+def post(blueprint, url, permission=None):
     def outer(func):
-        @blueprint.route(url, methods=method)
+        @blueprint.route(url, methods=['POST'])
         @login_required
         @permission_required(permission, redirect=False)
         @wraps(func)
+        @process_request
         def inner(*args, **kwargs):
             try:
                 return func(*args, **kwargs)

@@ -18,7 +18,7 @@
     stroke-width: 2;
     stroke-dasharray: 5, 5;
   }
-  
+
   .node text {
     -webkit-touch-callout: none;
     -webkit-user-select: none;
@@ -28,18 +28,13 @@
     user-select: none;
     font: 10px sans-serif;
   }
-
   </style>
 {% endblock stylesheets %}
 
 {% block content %}
-  {% include 'gis_modals.html' %}
   {% include 'device_modal.html' %}
   {% include 'link_modal.html' %}
   {% include 'connection_parameters_modal.html' %}
-  <ul id="contextMenu" class="dropdown-menu" role="menu">
-    <li><a tabindex="-1" href="#">Parameters</a></li>
-  </ul>
   <div class="right_col" role="main">
     <div class="row">
       <div class="col-md-12 col-sm-12 col-xs-12">
@@ -70,6 +65,7 @@
   <!-- D3.js -->
   <script src="{{ url_for('views_blueprint.static', filename='d3/d3.v3.min.js') }}"></script>
   <script>
+    const propertyTypes = {{ property_types|tojson|safe }};
     var graph = {  
       "nodes":[
         {% for device in devices %}  
@@ -98,12 +94,8 @@
         {% endfor %}
       ]
     };
-    var labels = {{ labels|tojson|safe }};
   </script>
-  <script>
-    var device_fields = {{ device_fields|tojson|safe }};
-    var link_fields = {{ link_fields|tojson|safe }};
-  </script>
+  <script src="{{ url_for('static', filename='enms/commonFunctions.js') }}"></script>
   <script src="{{ url_for('objects_blueprint.static', filename='objectCommonFunctions.js') }}"></script>
   <script src="{{ url_for('views_blueprint.static', filename='logicalView.js') }}"></script>
 {% endblock javascripts %}

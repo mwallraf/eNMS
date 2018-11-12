@@ -10,29 +10,19 @@ from eNMS.base.models import Base
 
 class Task(Base):
 
-    __tablename__ = 'Task'
-
+    __tablename__ = type = 'Task'
     id = Column(Integer, primary_key=True)
     name = Column(String, unique=True)
     description = Column(String)
     creation_time = Column(String)
     status = Column(String)
-    type = Column(String)
-    user_id = Column(Integer, ForeignKey('User.id'))
-    user = relationship('User', back_populates='tasks')
     frequency = Column(String)
     start_date = Column(String)
     end_date = Column(String)
     job_id = Column(Integer, ForeignKey('Job.id'))
     job = relationship('Job', back_populates='tasks')
 
-    __mapper_args__ = {
-        'polymorphic_identity': 'Task',
-        'polymorphic_on': type
-    }
-
     def __init__(self, **kwargs):
-        self.job = kwargs.pop('job')
         self.update(**kwargs)
         self.status = 'Active'
         self.creation_time = str(datetime.now())

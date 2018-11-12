@@ -3,8 +3,8 @@ from sqlalchemy import Column, ForeignKey, Integer, String
 
 from eNMS import mail
 from eNMS.automation.models import Service
+from eNMS.base.classes import service_classes
 from eNMS.base.helpers import get_one
-from eNMS.base.models import service_classes
 
 
 class MailNotificationService(Service):
@@ -20,7 +20,7 @@ class MailNotificationService(Service):
     multiprocessing = False
 
     __mapper_args__ = {
-        'polymorphic_identity': 'mail_notification_service',
+        'polymorphic_identity': 'MailNotificationService',
     }
 
     def job(self, _):
@@ -39,4 +39,4 @@ class MailNotificationService(Service):
         return {'success': True, 'result': str(message)}
 
 
-service_classes['mail_notification_service'] = MailNotificationService
+service_classes['MailNotificationService'] = MailNotificationService

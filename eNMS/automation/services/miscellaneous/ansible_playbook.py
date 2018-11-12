@@ -6,7 +6,7 @@ from subprocess import check_output
 
 from eNMS.automation.helpers import substitute
 from eNMS.automation.models import Service
-from eNMS.base.models import service_classes
+from eNMS.base.classes import service_classes
 
 
 class AnsiblePlaybookService(Service):
@@ -24,7 +24,7 @@ class AnsiblePlaybookService(Service):
     inventory_from_selection = Column(Boolean)
 
     __mapper_args__ = {
-        'polymorphic_identity': 'ansible_playbook_service',
+        'polymorphic_identity': 'AnsiblePlaybookService',
     }
 
     def job(self, device, payload):
@@ -42,10 +42,10 @@ class AnsiblePlaybookService(Service):
             pass
         match = substitute(self.content_match, locals())
         success = (
-            self.content_match_regex and search(match, result)
+            self.content_match_regex and bool(search(match, result))
             or match in result and not self.content_match_regex
         )
         return {'success': False, 'result': result}
 
 
-service_classes['ansible_playbook_service'] = AnsiblePlaybookService
+service_classes['AnsiblePlaybookService'] = AnsiblePlaybookService

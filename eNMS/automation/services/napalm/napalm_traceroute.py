@@ -3,7 +3,7 @@ from sqlalchemy.ext.mutable import MutableDict
 
 from eNMS.automation.helpers import napalm_connection, NAPALM_DRIVERS
 from eNMS.automation.models import Service
-from eNMS.base.models import service_classes
+from eNMS.base.classes import service_classes
 
 
 class NapalmTracerouteService(Service):
@@ -15,13 +15,13 @@ class NapalmTracerouteService(Service):
     driver_values = NAPALM_DRIVERS
     multiprocessing = True
     optional_args = Column(MutableDict.as_mutable(PickleType), default={})
-    source = Column(String)
+    source_ip = Column(String)
     timeout = Column(Integer)
     ttl = Column(Integer)
     vrf = Column(String)
 
     __mapper_args__ = {
-        'polymorphic_identity': 'napalm_traceroute_service',
+        'polymorphic_identity': 'NapalmTracerouteService',
     }
 
     def job(self, device, payload):
@@ -38,4 +38,4 @@ class NapalmTracerouteService(Service):
         return {'success': 'success' in traceroute, 'result': traceroute}
 
 
-service_classes['napalm_traceroute_service'] = NapalmTracerouteService
+service_classes['NapalmTracerouteService'] = NapalmTracerouteService

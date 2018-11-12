@@ -1,12 +1,13 @@
 from flask_mail import Message
 from json import dumps
+from os import remove
 from requests import post
 from sqlalchemy import Boolean, Column, ForeignKey, Integer
 
 from eNMS import mail
 from eNMS.automation.models import Service
+from eNMS.base.classes import service_classes
 from eNMS.base.helpers import get_one, str_dict
-from eNMS.base.models import service_classes
 
 
 class SwissArmyKnifeService(Service):
@@ -17,7 +18,7 @@ class SwissArmyKnifeService(Service):
     multiprocessing = Column(Boolean, default=False)
 
     __mapper_args__ = {
-        'polymorphic_identity': 'swiss_army_knife_service',
+        'polymorphic_identity': 'SwissArmyKnifeService',
     }
 
     def job(self, *args):
@@ -45,8 +46,15 @@ class SwissArmyKnifeService(Service):
             payload['job']['name'],
             sender=parameters.mail_sender,
             recipients=parameters.mail_recipients.split(','),
-            body=str_dict(payload['result'])
+            body=payload['result']
         )
+        runtime = payload["runtime"].replace('.', '').replace(':', '')
+        filename = f'logs-{runtime}.txt'
+        with open(filename, 'w') as file:
+            file.write(str_dict(payload["logs"][payload["runtime"]]))
+        with open(filename, 'r') as file:
+            message.attach(filename, 'text/plain', file.read())
+        remove(filename)
         mail.send(message)
         return {'success': True}
 
@@ -56,8 +64,8 @@ class SwissArmyKnifeService(Service):
     def mattermost_feedback_notification(self, payload):
         parameters = get_one('Parameters')
         post(parameters.mattermost_url, data=dumps({
-            "channel": parameters.mattermost_channel,
-            "text": str_dict(payload['result'])
+            'channel': parameters.mattermost_channel,
+            'text': payload['result']
         }))
         return {'success': True}
 
@@ -77,4 +85,4 @@ class SwissArmyKnifeService(Service):
         }
 
 
-service_classes['swiss_army_knife_service'] = SwissArmyKnifeService
+service_classes['SwissArmyKnifeService'] = SwissArmyKnifeService

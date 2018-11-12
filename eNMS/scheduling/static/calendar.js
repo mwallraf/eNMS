@@ -1,5 +1,6 @@
 /*
 global
+doc: false
 showTaskModal: false
 tasks: false
 */
@@ -31,8 +32,5 @@ $(function() {
     editable: true,
     events: events,
   });
-  $('#doc-link').attr(
-    'href',
-    'https://enms.readthedocs.io/en/latest/scheduling/task_management.html'
-  );
+  doc('https://enms.readthedocs.io/en/latest/scheduling/task_management.html');
 });

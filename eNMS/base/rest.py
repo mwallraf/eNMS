@@ -1,16 +1,13 @@
-from flask import current_app, jsonify, make_response, request
+from flask import jsonify, make_response, request
 from flask_restful import Api, Resource
 
 from eNMS import auth
 from eNMS.base.helpers import delete, factory, fetch
-from eNMS.base.security import get_user_credentials
 
 
 @auth.get_password
 def get_password(username):
-    user = fetch('User', name=username)
-    if user:
-        return get_user_credentials(current_app, user)[1]
+    return fetch('User', name=username).password
 
 
 @auth.error_handler
@@ -37,7 +34,7 @@ class GetInstance(Resource):
     decorators = [auth.login_required]
 
     def get(self, cls, name):
-        return fetch(cls, name=name).properties
+        return fetch(cls, name=name).get_properties()
 
     def delete(self, cls, name):
         return delete(fetch(cls, name=name))

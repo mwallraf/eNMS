@@ -2,6 +2,7 @@
 global
 alertify: false
 call: false
+doc: false
 fCall: false
 fields: false
 tasks: false
@@ -24,13 +25,15 @@ function addTask(mode, properties) {
   }
   const status = properties.status == 'active' ? 'pause' : 'resume';
   values.push(
-    `<button type="button" class="btn btn-success btn-xs"
-    onclick="showTaskModal('${properties.id}')">Edit</button>`,
     `<button id="pause-resume-${properties.id}" type="button"
-    class="btn btn-danger btn-xs" onclick="${status}Task('${properties.id}')">
+    class="btn btn-success btn-xs" onclick="${status}Task('${properties.id}')">
     ${status.charAt(0).toUpperCase() + status.substr(1)}</button>`,
+    `<button type="button" class="btn btn-primary btn-xs"
+    onclick="showTaskModal('${properties.id}')">Edit</button>`,
+    `<button type="button" class="btn btn-primary btn-xs"
+    onclick="showTaskModal('${properties.id}', true)">Duplicate</button>`,
     `<button type="button" class="btn btn-danger btn-xs"
-    onclick="deleteTask('${properties.id}')">Delete</button>`
+    onclick="deleteInstance('task', '${properties.id}')">Delete</button>`
   );
 
   if (mode == 'edit') {
@@ -45,24 +48,13 @@ function addTask(mode, properties) {
  * Schedule a task.
  */
 function scheduleTask() { // eslint-disable-line no-unused-vars
-  fCall('/scheduling/scheduler', '#task-modal-form', function(task) {
+  fCall('/update/task', '#task-modal-form', function(task) {
     const mode = $('#title').text().startsWith('Edit') ? 'edit' : 'add';
     addTask(mode, task);
     const message = `Task '${task.name}'
     ${mode == 'edit' ? 'edited' : 'created'} !`;
     alertify.notify(message, 'success', 5);
     $('#task-modal').modal('hide');
-  });
-}
-
-/**
- * Delete a task.
- * @param {id} id - Task id.
- */
-function deleteTask(id) { // eslint-disable-line no-unused-vars
-  call(`/scheduling/delete_task/${id}`, function(result) {
-    table.row($(`#${id}`)).remove().draw(false);
-    alertify.notify('Task successfully deleted.', 'success', 5);
   });
 }
 
@@ -115,8 +107,5 @@ function resumeTask(id) { // eslint-disable-line no-unused-vars
       $('#' + dates[i]).data('DateTimePicker').minDate(today);
     }
   }
-  $('#doc-link').attr(
-    'href',
-    'https://enms.readthedocs.io/en/latest/scheduling/task_management.html'
-  );
+  doc('https://enms.readthedocs.io/en/latest/scheduling/task_management.html');
 })();

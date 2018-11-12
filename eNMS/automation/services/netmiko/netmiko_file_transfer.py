@@ -3,7 +3,7 @@ from sqlalchemy import Boolean, Column, Float, ForeignKey, Integer, String
 
 from eNMS.automation.helpers import netmiko_connection, NETMIKO_SCP_DRIVERS
 from eNMS.automation.models import Service
-from eNMS.base.models import service_classes
+from eNMS.base.classes import service_classes
 
 
 class NetmikoFileTransferService(Service):
@@ -27,7 +27,7 @@ class NetmikoFileTransferService(Service):
     global_delay_factor = Column(Float, default=1.)
 
     __mapper_args__ = {
-        'polymorphic_identity': 'netmiko_file_transfer_service',
+        'polymorphic_identity': 'NetmikoFileTransferService',
     }
 
     def job(self, device, payload):
@@ -46,4 +46,4 @@ class NetmikoFileTransferService(Service):
         return {'success': True, 'result': transfer_dict}
 
 
-service_classes['netmiko_file_transfer_service'] = NetmikoFileTransferService
+service_classes['NetmikoFileTransferService'] = NetmikoFileTransferService

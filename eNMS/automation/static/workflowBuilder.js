@@ -2,25 +2,19 @@
 global
 alertify: false
 call: false
-compareLogs: false
+doc: false
 editService: false
 fCall: false
 partial: false
 runJob: false
 showLogs: false
 showModal: false
+showTypeModal: false
 vis: false
 workflow: true
 */
 
 const workflowBuilder = true; // eslint-disable-line no-unused-vars
-
-/* When running a workflow, it takes a few seconds to switch from "Idle" to
-"Running" status. workflowInit will be true for 10 seconds after starting the
-workflow, and eNMS will not stop querying for the status until workflowInit
-is False */
-let workflowInit = false;
-
 const container = document.getElementById('network');
 const dsoptions = {
   edges: {
@@ -39,16 +33,11 @@ const dsoptions = {
   manipulation: {
     enabled: false,
     addNode: function(data, callback) {
-      // filling in the popup DOM elements
-    },
-    editNode: function(data, callback) {
-      // filling in the popup DOM elements
     },
     addEdge: function(data, callback) {
       if (data.from != data.to) {
-        data.type = edgeType == 'success' ? true : false;
+        data.subtype = edgeType == 'success' ? true : false;
         saveEdge(data);
-        graph.addEdgeMode();
       }
     },
   },
@@ -73,43 +62,33 @@ function displayWorkflow(wf) {
   graph.on('oncontext', function(properties) {
     properties.event.preventDefault();
     const node = this.getNodeAt(properties.pointer.DOM);
+    const edge = this.getEdgeAt(properties.pointer.DOM);
     if (typeof node !== 'undefined' && node != 1 && node != 2) {
       graph.selectNodes([node]);
+      $('.global,.edge-selection').hide();
       $('.node-selection').show();
-      $('.global').hide();
+      selectedNode = node;
+    } else if (typeof edge !== 'undefined' && node != 1 && node != 2) {
+      graph.selectEdges([edge]);
+      $('.global,.node-selection').hide();
+      $('.edge-selection').show();
       selectedNode = node;
     } else {
-      $('.global').show();
       $('.node-selection').hide();
+      $('.global').show();
     }
   });
   return graph;
 }
 
 if (workflow) {
-  $('#workflow-name').val(workflow.id);
+  $('#current-workflow').val(workflow.id);
   displayWorkflow(workflow);
 } else {
-  call(`/automation/get/${$('#workflow-name').val()}`, function(result) {
+  call(`/get/workflow/${$('#current-workflow').val()}`, function(result) {
     workflow = result;
     graph = displayWorkflow(result);
   });
-}
-
-/**
- * Set job as start of the workflow.
- * @param {id} id - Id.
- */
-function setStart(id) {
-  saveEdge({from: 1, to: id, type: true});
-}
-
-/**
- * Set job as end of the workflow.
- * @param {id} id - Id.
- */
-function setEnd(id) {
-  saveEdge({from: id, to: 2, type: true});
 }
 
 /**
@@ -159,10 +138,10 @@ function deleteNode(id) {
  * @param {edge} edge - Edge to add to the workflow.
  */
 function saveEdge(edge) {
-  const param = `${workflow.id}/${edge.type}/${edge.from}/${edge.to}`;
+  const param = `${workflow.id}/${edge.subtype}/${edge.from}/${edge.to}`;
   call(`/automation/add_edge/${param}`, function(edge) {
-    alertify.notify('Edge added to the workflow', 'success', 5);
     edges.add(edgeToEdge(edge));
+    graph.addEdgeMode();
   });
 }
 
@@ -171,9 +150,7 @@ function saveEdge(edge) {
  * @param {edgeId} edgeId - Id of the edge to be deleted.
  */
 function deleteEdge(edgeId) {
-  call(`/automation/delete_edge/${workflow.id}/${edgeId}`, function(edge) {
-    alertify.notify('Edge deleted the workflow', 'success', 5);
-  });
+  call(`/automation/delete_edge/${workflow.id}/${edgeId}`, () => {});
 }
 
 /**
@@ -206,11 +183,11 @@ function jobToNode(job) {
 function edgeToEdge(edge) {
   return {
     id: edge.id,
-    label: edge.type ? 'Success' : 'Failure',
-    type: edge.type,
+    label: edge.subtype ? 'Success' : 'Failure',
+    type: edge.subtype,
     from: edge.source_id,
     to: edge.destination_id,
-    color: {color: edge.type ? 'green' : 'red'},
+    color: {color: edge.subtype ? 'green' : 'red'},
     arrows: {to: {enabled: true}},
   };
 }
@@ -220,11 +197,15 @@ function edgeToEdge(edge) {
  */
 function deleteSelection() {
   const node = graph.getSelectedNodes()[0];
-  if (node) {
-    deleteNode(node);
+  if (node != 1 && node != 2) {
+    if (node) {
+      deleteNode(node);
+    }
+    graph.getSelectedEdges().map((edge) => deleteEdge(edge));
+    graph.deleteSelected();
+  } else {
+    alertify.notify('Start and End cannot be deleted', 'error', 5);
   }
-  graph.getSelectedEdges().map((edge) => deleteEdge(edge));
-  graph.deleteSelected();
 }
 
 /**
@@ -240,13 +221,12 @@ function switchMode(mode) {
     graph.addNodeMode();
     alertify.notify('Mode: node motion.', 'success', 5);
   }
-  // close the bootstrap submenu for layers
   $('.dropdown-submenu a.menu-layer').next('ul').toggle();
 }
 
-$('#workflow-name').on('change', function() {
+$('#current-workflow').on('change', function() {
   savePositions();
-  call(`/automation/get/${this.value}`, function(result) {
+  call(`/get/workflow/${this.value}`, function(result) {
     workflow = result;
     graph = displayWorkflow(result);
     alertify.notify(`Workflow '${workflow.name}' displayed.`, 'success', 5);
@@ -279,22 +259,19 @@ function showWorkflowLogs() {
 }
 
 /**
- * Compare workflow logs
+ * Edit Workflow
  */
-function compareWorkflowLogs() {
-  compareLogs(workflow.id);
+function editWorkflow() {
+  showTypeModal('workflow', workflow.id);
 }
 
 const action = {
   'Run Workflow': runWorkflow,
   'Edit': editService,
-  'Set as Start': setStart,
-  'Set as End': setEnd,
   'Run': runJob,
-  'Logs': showLogs,
-  'Compare Logs': compareLogs,
+  'Service Logs': showLogs,
+  'Edit Workflow': editWorkflow,
   'Workflow Logs': showWorkflowLogs,
-  'Compare Workflow Logs': compareWorkflowLogs,
   'Add Service or Workflow': partial(showModal, 'add-job'),
   'Delete': deleteSelection,
   'Create "Success" edge': partial(switchMode, 'success'),
@@ -316,25 +293,16 @@ $('#network').contextMenu({
   },
 });
 
-(function() {
-  $('#doc-link').attr(
-    'href',
-    'https://enms.readthedocs.io/en/latest/workflows/index.html'
-  );
-})();
-
 /**
  * Start the workflow.
  */
 function runWorkflow() { // eslint-disable-line no-unused-vars
   workflow.jobs.forEach((job) => colorJob(job.id, '#D2E5FF'));
   runJob(workflow.id);
-  workflowInit = true;
-  getWorkflowStatus();
 }
 
 /**
- * Get Workflow Status.
+ * Get Workflow State.
  * @param {id} id - Workflow Id.
  * @param {color} color - Node color.
  */
@@ -345,40 +313,43 @@ function colorJob(id, color) {
 }
 
 /**
- * Get Workflow Status.
+ * Get Workflow State.
  */
-function getWorkflowStatus() {
+function getWorkflowState() {
   if (workflow) {
-    call(`/automation/get/${workflow.id}`, function(wf) {
-      $('#state').text(`State: ${wf.state}.`);
-      if (wf.status.current_device) {
-        $('#current-device').text(
-          `Current device: ${wf.status.current_device}.`
-        );
-      }
-      if (wf.status.current_job) {
-        colorJob(wf.status.current_job.id, '#89CFF0');
-        $('#current-job').text(`Current job: ${wf.status.current_job.name}.`);
-      } else {
-        $('#current-device,#current-job').empty();
-      }
-      if (wf.status.jobs) {
-        $.each(wf.status.jobs, (id, success) => {
-          colorJob(id, success ? '#32cd32' : '#FF6666');
-        });
-      }
-      if (workflowInit || wf.state == 'Running') {
-        if (workflowInit && wf.state == 'Running') {
-          workflowInit = !workflowInit;
+    call(`/get/workflow/${workflow.id}`, function(wf) {
+      $('#status').text(`Status: ${wf.status}.`);
+      if (Object.keys(wf.state).length !== 0) {
+        if (wf.state.current_device) {
+          $('#current-device').text(
+            `Current device: ${wf.state.current_device}.`
+          );
         }
-        setTimeout(getWorkflowStatus, 1000);
+        if (wf.state.current_job) {
+          colorJob(wf.state.current_job.id, '#89CFF0');
+          $('#current-job').text(`Current job: ${wf.state.current_job.name}.`);
+        } else {
+          $('#current-device,#current-job').empty();
+        }
+        if (wf.state.jobs) {
+          $.each(wf.state.jobs, (id, success) => {
+            colorJob(id, success ? '#32cd32' : '#FF6666');
+          });
+        }
       } else {
-        call(`/automation/reset_workflow_logs/${workflow.id}`, () => {});
+        $('#current-job').text('');
+        wf.jobs.forEach((job) => colorJob(job.id, '#D2E5FF'));
       }
     });
   }
+  setTimeout(getWorkflowState, 1000);
 }
 
 $(window).bind('beforeunload', function() {
   savePositions();
 });
+
+(function() {
+  doc('https://enms.readthedocs.io/en/latest/workflows/index.html');
+  getWorkflowState();
+})();

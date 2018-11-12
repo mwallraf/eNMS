@@ -3,7 +3,6 @@ global
 alertify: false
 call: false
 L: false
-labels: false
 layers: false
 links: false
 link_colors: false
@@ -13,7 +12,7 @@ parameters: false
 partial: false
 polylinesArray: true
 showModal: false
-showObjectModal: false
+showTypeModal: false
 selection: true
 device_subtypes: false
 view: false
@@ -32,7 +31,7 @@ const map = L.map('mapid').setView(
 const osmLayer = L.tileLayer(layers['osm']);
 map.addLayer(osmLayer);
 let currentLayer = osmLayer;
-if (view == 'markercluster') {
+if (view == '2DC') {
   markers = L.markerClusterGroup();
 }
 
@@ -96,10 +95,10 @@ for (let i = 0; i < devices.length; i++) {
       selection.push(this.device_id);
       $('#devices').val(selection);
     */
-    showObjectModal('device', this.device_id);
+    showTypeModal('device', this.device_id);
   });
 
-  marker.bindTooltip(device[labels.device], {
+  marker.bindTooltip(device['name'], {
     permanent: false,
   });
 
@@ -131,10 +130,10 @@ for (let i = 0; i < links.length; i++) {
   });
   polylinesArray.push(polyline);
   polyline.link_id = link.id;
-  polyline.on('dblclick', function(e) {
-    showObjectModal('link', this.link_id);
+  polyline.on('click', function(e) {
+    showTypeModal('link', this.link_id);
   });
-  polyline.bindTooltip(link[labels.link], {
+  polyline.bindTooltip(link['name'], {
     permanent: false,
   });
   if (view == 'leaflet') {
@@ -197,9 +196,7 @@ $('#select-filters').on('change', function() {
 });
 
 const action = {
-  'Parameters': partial(showModal, 'filters'),
   'Export to Google Earth': partial(showModal, 'google-earth'),
-  'Add new task': partial(showModal, 'scheduling'),
   'Open Street Map': partial(switchLayer, 'osm'),
   'Google Maps': partial(switchLayer, 'gm'),
   'NASA': partial(switchLayer, 'nasa'),

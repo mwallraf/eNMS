@@ -1,70 +1,40 @@
-<div id="service-editor" class="modal fade bs-example-modal-lg" tabindex="-1" role="dialog" aria-hidden="true">
+<div id="edit-service" class="modal fade bs-example-modal-lg" tabindex="-1" role="dialog" aria-hidden="true">
   <div class="modal-dialog modal-lg">
     <div class="modal-content">
       <div class="modal-header">
         <button type="button" class="close" data-dismiss="modal">
           <span aria-hidden="true">×</span>
         </button>
-        <h4 class="modal-title" id="title"></h4>
+        <h4 class="modal-title" id="title-service"></h4>
       </div>
-      <form id="service-editor-form" data-parsley-validate id="form" class="form-horizontal form-label-left" method="post" autocomplete="off">
+      <form id="edit-service-form" data-parsley-validate id="form" class="form-horizontal form-label-left" method="post" autocomplete="off">
         <div class="modal-body">
-          {{ service_form.id() }}
           <label>Type of Service</label>
           <div class='form-group'>
-            <select class="form-control" id="services"></select>
+            <select class="form-control" id="service-type"></select>
           </div>
-          <label>Name</label>
-          <div class="form-group">
-            {{ service_form.name(class="form-control", required=true) }}
-          </div>
-          <label>Description</label>
-          <div class="form-group">
-            {{ service_form.description(class="form-control") }}
-          </div>
-          <label>Devices (optional: can be defined in the workflow)</label>
-          <div class='form-group'>
-            {{ service_form.devices(class="form-control") }}
-          </div>
-          <label>Pools (optional: can be defined in the workflow)</label>
-          <div class='form-group'>
-            {{ service_form.pools(class="form-control") }}
-          </div>
-          <label>Vendor</label>
-          <div class="form-group">
-            {{ service_form.vendor(class="form-control") }}
-          </div>
-          <label>Operating System</label>
-          <div class="form-group">
-            {{ service_form.operating_system(class="form-control") }}
-          </div>
-          <label>Waiting time (in seconds)</label>
-          <div class='form-group'>
-            {{ service_form.waiting_time(class="form-control", required=true) }}
-          </div>
-          <label>Number of retries</label>
-          <div class='form-group'>
-            {{ service_form.number_of_retries(class="form-control", required=true) }}
-          </div>
-          <label>Time between retries (in seconds)</label>
-          <div class='form-group'>
-            {{ service_form.time_between_retries(class="form-control", required=true) }}
-          </div>
-          <fieldset>
-            <div class="item">
-              <input id="send_notification" name="send_notification" type="checkbox" value="y">
-              <label>Send Notification</label>
-            </div>
-          </fieldset>
-          <label>Send Notification Method</label>
-          <div class='form-group'>
-            {{ service_form.send_notification_method(class="form-control") }}
-          </div>
+          {% for field in service_form %}
+            {% if field.widget.input_type == 'hidden' %}
+              {{ field(id="service-id") }}
+            {% elif field.name == 'send_notification' %}
+              <fieldset>
+                <div class="item">
+                  <input id="service-{{ field.name }}" name="{{ field.name }}" type="checkbox" value="y">
+                  <label>{{ field.name }}</label>
+                </div>
+              </fieldset>
+            {% else %}
+              <label>{{ field.label }}</label>
+              <div class='form-group'>
+                {{ field(id='service-' + field.name, class="form-control") }}
+              </div>
+            {% endif %}
+          {% endfor %}
           <div id="html-form"></div>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-          <button type="button" class="btn btn-success" onclick="saveService()">Submit</button>
+          <button type="button" class="btn btn-success" onclick="saveService('service')">Save</button>
         </div>
       </form>
     </div>

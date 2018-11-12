@@ -1,4 +1,3 @@
-from collections import defaultdict
 from os import environ
 from sqlalchemy import Boolean, Integer, String, Float
 from yaml import load
@@ -20,7 +19,12 @@ sql_types = {
 }
 
 custom_properties = get_custom_properties()
-boolean_properties = ['multiprocessing', 'send_notification']
+boolean_properties = [
+    'mattermost_verify_certificate',
+    'multiprocessing',
+    'send_notification'
+]
+private_properties = ['password', 'enable_password']
 
 base_properties = [
     'id',
@@ -70,7 +74,8 @@ device_public_properties = object_common_properties[1:] + [
     'ip_address',
     'longitude',
     'latitude',
-    'port'
+    'port',
+    'username'
 ] + list(custom_properties)
 
 task_properties = base_properties + [
@@ -118,6 +123,7 @@ job_public_properties = [
     'name',
     'type',
     'description',
+    'status',
     'state',
     'logs',
     'positions',
@@ -133,8 +139,7 @@ service_public_properties = job_public_properties
 workflow_public_properties = job_public_properties + [
     'vendor',
     'operating_system',
-    'multiprocessing',
-    'status'
+    'multiprocessing'
 ]
 
 service_table_properties = [
@@ -143,7 +148,7 @@ service_table_properties = [
     'description',
     'number_of_retries',
     'time_between_retries',
-    'state'
+    'status'
 ]
 
 workflow_table_properties = [
@@ -153,12 +158,12 @@ workflow_table_properties = [
     'operating_system',
     'number_of_retries',
     'time_between_retries',
-    'state'
+    'status'
 ]
 
 workflow_edge_properties = [
     'name',
-    'type',
+    'subtype',
     'source_id',
     'destination_id'
 ]
@@ -177,17 +182,8 @@ user_serialized_properties = [
 user_permissions = [
     'Admin',
     'Connect to device',
-    'Admin Section',
-    'Inventory Section',
-    'Views Section',
-    'Automation Section',
-    'Scheduling Section',
-    'Logs Section',
-    'Edit Admin Section',
-    'Edit Inventory Section',
-    'Edit Automation Section',
-    'Edit Scheduling Section',
-    'Edit Logs Section'
+    'View',
+    'Edit'
 ]
 
 log_public_properties = [
@@ -208,9 +204,19 @@ parameters_public_properties = [
     'default_zoom_level',
     'gotty_start_port',
     'gotty_end_port',
+    'mail_sender',
+    'mail_recipients',
+    'mattermost_url',
+    'mattermost_channel',
+    'mattermost_verify_certificate',
     'opennms_rest_api',
     'opennms_devices',
-    'opennms_login'
+    'opennms_login',
+    'pool',
+    'tacacs_ip_address',
+    'tacacs_password',
+    'tacacs_port',
+    'tacacs_timeout',
 ]
 
 task_serialized_properties = [
@@ -343,18 +349,53 @@ pretty_names = {
 
 pretty_names.update({k: v['pretty_name'] for k, v in custom_properties.items()})
 reverse_pretty_names = {v: k for k, v in pretty_names.items()}
-service_properties = defaultdict(list)
-property_types = {'send_notification': bool}
 
-serialization_properties = {
-    'destination': 'Device',
-    'device': 'Device',
-    'edge': 'WorkflowEdge',
-    'job': 'Job',
-    'link': 'Link',
-    'pool': 'Pool',
-    'source': 'Device',
-    'task': 'Task'
+property_types = {
+    'devices': 'object-list',
+    'links': 'object-list',
+    'pools': 'object-list',
+    'jobs': 'object-list',
+    'edges': 'object-list',
+    'permissions': 'list',
+    'source': 'object',
+    'destination': 'object',
+    'import_export_types': 'list',
+    'send_notification': 'bool'
+}
+
+relationships = {
+    'Device': {},
+    'Link': {
+        'source': 'Device',
+        'destination': 'Device'
+    },
+    'Pool': {
+        'device': 'Device',
+        'link': 'Link'
+    },
+    'Service': {
+        'device': 'Device',
+        'pool': 'Pool',
+        'workflow': 'Workflow',
+        'task': 'Task'
+    },
+    'Task': {
+        'job': 'Job'
+    },
+    'Workflow': {
+        'edge': 'WorkflowEdge',
+        'job': 'Job',
+        'device': 'Device',
+        'pool': 'Pool'
+    },
+    'WorkflowEdge': {
+        'source': 'Job',
+        'destination': 'Job',
+        'workflow': 'Workflow'
+    },
+    'Parameters': {
+        'pool': 'Pool'
+    }
 }
 
 device_import_properties = device_public_properties + [
@@ -398,7 +439,7 @@ workflow_import_properties = workflow_public_properties + [
 workflow_edge_import_properties = [
     'id',
     'name',
-    'type',
+    'subtype',
     'source_id',
     'destination_id',
     'workflow'
@@ -420,4 +461,11 @@ import_properties = {
 export_properties = {
     'Device': device_public_properties,
     'Link': link_table_properties
+}
+
+# Properties to not migrate
+
+dont_migrate = {
+    'Service': ['logs', 'state', 'tasks', 'workflows'],
+    'Workflow': ['logs', 'state', 'status']
 }

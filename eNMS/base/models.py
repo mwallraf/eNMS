@@ -1,11 +1,15 @@
+from flask_wtf import FlaskForm
 from json import dumps, loads
 
-from eNMS import db
+from eNMS import db, use_vault, vault_client
+from eNMS.base.helpers import fetch, objectify, choices
 from eNMS.base.properties import (
     cls_to_properties,
+    dont_migrate,
     property_types,
     boolean_properties,
-    serialization_properties
+    relationships as rel,
+    private_properties
 )
 
 
@@ -22,23 +26,48 @@ class Base(db.Model):
     def __repr__(self):
         return self.name
 
+    def __getattribute__(self, property):
+        if property in private_properties and use_vault:
+            path = f'secret/data/{self.__tablename__}/{self.name}/{property}'
+            data = vault_client.read(path)
+            return data['data']['data'][property] if data else ''
+        else:
+            return super().__getattribute__(property)
+
+    def __setattr__(self, property, value):
+        if property in private_properties:
+            if not value:
+                return
+            if use_vault:
+                vault_client.write(
+                    f'secret/data/{self.__tablename__}/{self.name}/{property}',
+                    data={property: value}
+                )
+        super().__setattr__(property, value)
+
     def update(self, **kwargs):
+        serial = rel.get(self.__tablename__, rel['Service'])
         for property, value in kwargs.items():
             property_type = property_types.get(property, None)
-            if property in boolean_properties:
-                value = kwargs[property] in ('y', 'on', 'false', 'true', True)
+            if property in serial:
+                value = fetch(serial[property], id=value)
+            elif property[:-1] in serial:
+                value = objectify(serial[property[:-1]], value)
+            elif property in boolean_properties:
+                value = kwargs[property] not in ('off', None, False)
             elif 'regex' in property:
                 value = property in kwargs
-            elif property_type == dict:
+            elif property_type == 'dict':
                 value = loads(value) if value else {}
-            elif property_type in [float, int]:
-                value = property_type(value or 0)
+            elif property_type in ['float', 'int']:
+                value = {'float': float, 'int': int}[property_type](value or 0)
             setattr(self, property, value)
 
-    @property
-    def properties(self):
-        class_name, result = self.__tablename__, {}
-        for property in cls_to_properties[class_name]:
+    def get_properties(self, export=False):
+        result = {}
+        for property in cls_to_properties[self.type]:
+            if property in private_properties:
+                continue
             try:
                 dumps(getattr(self, property))
                 result[property] = getattr(self, property)
@@ -47,19 +76,28 @@ class Base(db.Model):
         return result
 
     def to_dict(self, export=False):
-        get = 'id' if export else 'properties'
-        properties = self.properties
-        for property in serialization_properties:
+        properties = self.get_properties(export)
+        no_migrate = dont_migrate.get(self.type, dont_migrate['Service'])
+        for property in rel.get(self.type, rel['Service']):
+            if export and property in no_migrate:
+                continue
             if hasattr(self, property):
-                if hasattr(getattr(self, property), 'properties'):
-                    properties[property] = getattr(getattr(self, property), get)
+                if hasattr(getattr(self, property), 'get_properties'):
+                    properties[property] = (
+                        getattr(self, property).id if export
+                        else getattr(self, property).get_properties()
+                    )
             if hasattr(self, f'{property}s'):
                 # a workflow has edges: we need to know not only the edge
                 # properties, but also the properties of its source and
                 # destination: we need the serialized edge.
                 properties[f'{property}s'] = [
-                    getattr(obj, get) for obj in getattr(self, f'{property}s')
+                    obj.id if export else obj.get_properties()
+                    for obj in getattr(self, f'{property}s')
                 ]
+        if export:
+            for property in no_migrate:
+                properties.pop(property, None)
         return properties
 
     @property
@@ -83,4 +121,11 @@ class Base(db.Model):
         return [obj.serialized for obj in cls.query.all() if obj.visible]
 
 
-classes, service_classes = {}, {}
+class BaseForm(FlaskForm):
+
+    def __init__(self, request, model=None):
+        super().__init__(request)
+        for property, cls in rel.get(model, {}).items():
+            for name in (property.lower(), f'{property.lower()}s'):
+                if hasattr(self, name):
+                    getattr(self, name).choices = choices(cls)

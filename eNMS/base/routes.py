@@ -1,12 +1,19 @@
 from collections import Counter
-from flask import jsonify, render_template, redirect, request, url_for
+from flask import jsonify, redirect, request, url_for
 
 from eNMS.base import bp
-from eNMS.base.models import classes
-from eNMS.base.helpers import fetch_all, get, post
+from eNMS.base.classes import classes
+from eNMS.base.helpers import (
+    delete,
+    factory,
+    fetch,
+    fetch_all,
+    fetch_all_visible,
+    get,
+    post
+)
 from eNMS.base.properties import (
     default_diagrams_properties,
-    pretty_names,
     reverse_pretty_names,
     type_to_diagram_properties
 )
@@ -19,12 +26,10 @@ def site_root():
 
 @get(bp, '/dashboard')
 def dashboard():
-    return render_template(
-        'dashboard.html',
-        names=pretty_names,
+    return dict(
         properties=type_to_diagram_properties,
         default_properties=default_diagrams_properties,
-        counters={cls: len(fetch_all(cls)) for cls in classes}
+        counters={cls: len(fetch_all_visible(cls)) for cls in classes}
     )
 
 
@@ -34,6 +39,21 @@ def get_counters(property, type):
     if property in reverse_pretty_names:
         property = reverse_pretty_names[property]
     return jsonify(Counter(map(lambda o: str(getattr(o, property)), objects)))
+
+
+@post(bp, '/get/<cls>/<id>', 'View')
+def get_instance(cls, id):
+    return jsonify(fetch(cls, id=id).serialized)
+
+
+@post(bp, '/update/<cls>', 'Edit')
+def update_instance(cls):
+    return jsonify(factory(cls, **request.form).serialized)
+
+
+@post(bp, '/delete/<cls>/<id>', 'Edit')
+def delete_instance(cls, id):
+    return jsonify(delete(cls, id=id))
 
 
 @post(bp, '/shutdown', 'Admin')

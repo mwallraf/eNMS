@@ -1,66 +1,83 @@
-from flask_wtf import FlaskForm
 from wtforms import (
+    BooleanField,
     FloatField,
     HiddenField,
     IntegerField,
-    TextField,
+    StringField,
     PasswordField,
     SelectField,
     SelectMultipleField
 )
 
-from eNMS.base.properties import user_permissions
+from eNMS.base.models import BaseForm
+from eNMS.base.properties import import_properties, user_permissions
 
 
-class LoginForm(FlaskForm):
-    name = TextField()
+class LoginForm(BaseForm):
+    name = StringField()
     password = PasswordField()
 
 
-class CreateAccountForm(FlaskForm):
-    name = TextField()
-    email = TextField()
-    password = PasswordField()
-
-
-class AddUser(FlaskForm):
+class AddUser(BaseForm):
     id = HiddenField()
-    name = TextField()
+    name = StringField()
     password = PasswordField()
-    email = TextField()
+    email = StringField()
     permission_choices = [(p, p) for p in user_permissions]
     permissions = SelectMultipleField(choices=permission_choices)
 
 
-class TacacsServerForm(FlaskForm):
-    ip_address = TextField('IP address')
-    password = PasswordField()
-    port = IntegerField(default=49)
-    timeout = IntegerField(default=10)
-
-
-class SyslogServerForm(FlaskForm):
-    ip_address = TextField('IP address', default='0.0.0.0')
-    port = IntegerField(default=514)
-
-
-class GeographicalParametersForm(FlaskForm):
+class AdministrationForm(BaseForm):
+    tacacs_ip_address = StringField('IP address')
+    tacacs_password = PasswordField()
+    tacacs_port = IntegerField(default=49)
+    tacacs_timeout = IntegerField(default=10)
+    syslog_ip_address = StringField('IP address', default='0.0.0.0')
+    syslog_port = IntegerField(default=514)
     default_longitude = FloatField()
     default_latitude = FloatField()
     default_zoom_level = IntegerField()
-
-
-class GottyParametersForm(FlaskForm):
     gotty_start_port = FloatField('Start port')
     gotty_end_port = FloatField('End port')
-
-
-class NotificationParametersForm(FlaskForm):
-    mail_sender = TextField()
-    mail_recipients = TextField()
-    mattermost_url = TextField('Mattermost URL')
-    mattermost_channel = TextField()
-
-
-class DatabaseFilteringForm(FlaskForm):
+    mail_sender = StringField()
+    mail_recipients = StringField()
+    mattermost_url = StringField('Mattermost URL')
+    mattermost_channel = StringField()
+    mattermost_verify_certificate = BooleanField()
     pool = SelectField(choices=())
+    categories = {
+        'TACACS+ Server': (
+            'tacacs_ip_address',
+            'tacacs_password',
+            'tacacs_port',
+            'tacacs_timeout'
+        ),
+        'Syslog Server': (
+            'syslog_ip_address',
+            'syslog_port',
+        ),
+        'Geographical Parameters': (
+            'default_longitude',
+            'default_latitude',
+            'default_zoom_level'
+        ),
+        'SSH Terminal Parameters': (
+            'gotty_start_port',
+            'gotty_end_port'
+        ),
+        'Notification Parameters': (
+            'mail_sender',
+            'mail_recipients',
+            'mattermost_url',
+            'mattermost_channel',
+            'mattermost_verify_certificate'
+        ),
+        'Horizontal Scaling': (
+            'pool',
+        )
+    }
+
+
+class MigrationsForm(BaseForm):
+    export_choices = [(p, p.capitalize()) for p in import_properties]
+    import_export_types = SelectMultipleField(choices=export_choices)

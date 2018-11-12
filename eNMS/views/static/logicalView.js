@@ -3,11 +3,9 @@ global
 alertify: false
 call: false
 d3: false
+doc: false
 graph: false
-labels: false
-partial: false
-showModal: false
-showObjectModal: false
+showTypeModal: false
 */
 
 const width = 1200;
@@ -37,7 +35,7 @@ function selectNode(d) {
     .attr('xlink:href', d.selected_img);
   sendSelection();
   */
-  showObjectModal('device', d.real_id);
+  showTypeModal('device', d.real_id);
 }
 
 /**
@@ -46,7 +44,7 @@ function selectNode(d) {
  */
 /*
 function showNodeProperties(d) {
-  showObjectModal('device', d.real_id);
+  showTypeModal('device', d.real_id);
 }
 */
 
@@ -55,7 +53,7 @@ function showNodeProperties(d) {
  * @param {d} d - selected link.
  */
 function showLinkProperties(d) {
-  showObjectModal('link', d.real_id);
+  showTypeModal('link', d.real_id);
 }
 
 /**
@@ -100,7 +98,7 @@ let link = container.selectAll('.link')
   .data(graph.links)
   .enter().append('line')
   .attr('class', 'link')
-  .on('dblclick', showLinkProperties);
+  .on('click', showLinkProperties);
 
 let node = container.selectAll('.node')
   .data(graph.nodes)
@@ -132,7 +130,7 @@ node.append('text')
   .attr('dx', 8)
   .attr('dy', '.35em')
   .text(function(d) {
-    return d[labels.device];
+    return d['name'];
   });
 
 force.on('tick', function() {
@@ -169,22 +167,6 @@ $('#select-filters').on('change', function() {
   });
 });
 
-let action = {
-  'Parameters': partial(showModal, 'filters'),
-  'Add new task': partial(showModal, 'scheduling'),
-};
-
-$('#logical_view').contextMenu({
-  menuSelector: '#contextMenu',
-  menuSelected: function(invokedOn, selectedMenu) {
-    let row = selectedMenu.text();
-    action[row]();
-  },
-});
-
 (function() {
-  $('#doc-link').attr(
-    'href',
-    'https://enms.readthedocs.io/en/latest/views/logical_view.html'
-  );
+  doc('https://enms.readthedocs.io/en/latest/views/logical_view.html');
 })();

@@ -1,21 +1,23 @@
-from flask_wtf import FlaskForm
 from wtforms import (
     BooleanField,
     HiddenField,
     IntegerField,
-    TextField,
+    StringField,
     SelectField,
     SelectMultipleField
 )
 
+from eNMS.base.models import BaseForm
 
-class JobForm(FlaskForm):
+
+class JobForm(BaseForm):
     id = HiddenField()
-    name = TextField()
-    description = TextField()
+    name = StringField()
+    description = StringField()
     devices = SelectMultipleField(choices=())
     pools = SelectMultipleField(choices=())
     waiting_time = IntegerField('Waiting time (in seconds)', default=0)
+    send_notification = BooleanField()
     send_notification_method = SelectField(choices=(
         ('mail_feedback_notification', 'Mail'),
         ('slack_feedback_notification', 'Slack'),
@@ -26,16 +28,16 @@ class JobForm(FlaskForm):
         'Time between retries (in seconds)',
         default=10
     )
-    vendor = TextField()
-    operating_system = TextField()
+    vendor = StringField()
+    operating_system = StringField()
 
 
-class CompareLogsForm(FlaskForm):
-    first_version = SelectField(choices=())
-    second_version = SelectField(choices=())
+class CompareLogsForm(BaseForm):
+    display = SelectField(choices=())
+    compare_with = SelectField(choices=())
 
 
-class AddJobForm(FlaskForm):
+class AddJobForm(BaseForm):
     job = SelectField()
 
 
@@ -43,5 +45,5 @@ class WorkflowForm(JobForm):
     multiprocessing = BooleanField()
 
 
-class WorkflowBuilderForm(FlaskForm):
+class WorkflowBuilderForm(BaseForm):
     workflow = SelectField()

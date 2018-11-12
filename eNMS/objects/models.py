@@ -8,6 +8,7 @@ from eNMS.base.associations import (
     job_device_table,
     job_pool_table
 )
+from eNMS.base.helpers import fetch, get_one
 from eNMS.base.models import Base
 from eNMS.base.properties import (
     custom_properties,
@@ -15,12 +16,17 @@ from eNMS.base.properties import (
     device_public_properties,
     sql_types
 )
+from eNMS.objects.helpers import database_filtering
 
 
 class Object(Base):
 
     __tablename__ = 'Object'
-
+    type = Column(String)
+    __mapper_args__ = {
+        'polymorphic_identity': 'Object',
+        'polymorphic_on': type
+    }
     id = Column(Integer, primary_key=True)
     hidden = Column(Boolean, default=False)
     name = Column(String, unique=True)
@@ -29,18 +35,12 @@ class Object(Base):
     model = Column(String)
     location = Column(String)
     vendor = Column(String)
-    type = Column(String)
-
-    __mapper_args__ = {
-        'polymorphic_identity': 'Object',
-        'polymorphic_on': type
-    }
 
 
-ParentDevice = type('CustomDevice', (Object,), {
+CustomDevice = type('CustomDevice', (Object,), {
     '__tablename__': 'CustomDevice',
-    'id': Column(Integer, ForeignKey('Object.id'), primary_key=True),
     '__mapper_args__': {'polymorphic_identity': 'CustomDevice'},
+    'id': Column(Integer, ForeignKey('Object.id'), primary_key=True),
     **{
         property: Column(sql_types[values['type']], default=values['default'])
         for property, values in custom_properties.items()
@@ -48,11 +48,11 @@ ParentDevice = type('CustomDevice', (Object,), {
 }) if custom_properties else Object
 
 
-class Device(ParentDevice):
+class Device(CustomDevice):
 
     __tablename__ = 'Device'
-
-    id = Column(Integer, ForeignKey(ParentDevice.id), primary_key=True)
+    __mapper_args__ = {'polymorphic_identity': 'Device'}
+    id = Column(Integer, ForeignKey(CustomDevice.id), primary_key=True)
     operating_system = Column(String)
     os_version = Column(String)
     ip_address = Column(String)
@@ -75,28 +75,14 @@ class Device(ParentDevice):
 
     class_type = 'device'
 
-    __mapper_args__ = {
-        'polymorphic_identity': 'Device',
-    }
-
 
 class Link(Object):
 
     __tablename__ = 'Link'
-
-    __mapper_args__ = {
-        'polymorphic_identity': 'Link',
-    }
-
+    __mapper_args__ = {'polymorphic_identity': 'Link'}
     id = Column(Integer, ForeignKey('Object.id'), primary_key=True)
-    source_id = Column(
-        Integer,
-        ForeignKey('Device.id')
-    )
-    destination_id = Column(
-        Integer,
-        ForeignKey('Device.id')
-    )
+    source_id = Column(Integer, ForeignKey('Device.id'))
+    destination_id = Column(Integer, ForeignKey('Device.id'))
     source = relationship(
         Device,
         primaryjoin=source_id == Device.id,
@@ -113,6 +99,21 @@ class Link(Object):
         back_populates='links'
     )
 
+    def __init__(self, **kwargs):
+        self.update(**kwargs)
+
+    def update(self, **kwargs):
+        if 'source_name' in kwargs:
+            source = fetch('Device', name=kwargs.pop('source_name'))
+            destination = fetch('Device', name=kwargs.pop('destination_name'))
+            kwargs.update({
+                'source_id': source.id,
+                'destination_id': destination.id,
+                'source': source.id,
+                'destination': destination.id
+            })
+        super().update(**kwargs)
+
     @property
     def source_name(self):
         return self.source.name
@@ -126,8 +127,9 @@ class Link(Object):
 
 AbstractPool = type('AbstractPool', (Base,), {
     '__tablename__': 'AbstractPool',
-    'id': Column(Integer, primary_key=True),
-    '__mapper_args__': {'polymorphic_identity': 'AbstractPool'}, **{
+    'type': 'AbstractPool',
+    '__mapper_args__': {'polymorphic_identity': 'AbstractPool'},
+    'id': Column(Integer, primary_key=True), **{
         **{f'device_{p}': Column(String) for p in device_public_properties},
         **{
             f'device_{p}_regex': Column(Boolean)
@@ -141,8 +143,7 @@ AbstractPool = type('AbstractPool', (Base,), {
 
 class Pool(AbstractPool):
 
-    __tablename__ = 'Pool'
-
+    __tablename__ = type = 'Pool'
     id = Column(Integer, ForeignKey('AbstractPool.id'), primary_key=True)
     name = Column(String, unique=True)
     description = Column(String)
@@ -170,16 +171,14 @@ class Pool(AbstractPool):
         self.devices = list(filter(self.object_match, Device.query.all()))
         self.links = []
         for link in Link.query.all():
-            # source and destination do not belong to a link __dict__, because
-            # they are SQLalchemy relationships and not columns
-            # we update __dict__ with these properties for the filtering
-            # system to include them
             link.__dict__.update({
                 'source': link.source,
                 'destination': link.destination
             })
             if self.object_match(link):
                 self.links.append(link)
+        if get_one('Parameters').pool == self:
+            database_filtering(self)
 
     def object_match(self, obj):
         return all(

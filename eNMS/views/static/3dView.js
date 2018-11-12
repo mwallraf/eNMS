@@ -10,7 +10,7 @@ partial: false
 polylinesArray: true
 selection: true
 showModal: false
-showObjectModal: false
+showTypeModal: false
 WE: false
 */
 
@@ -48,7 +48,7 @@ for (let i = 0; i < devices.length; i++) {
       selection.push(devices[i].id);
       $('#devices').val(selection);
     */
-    showObjectModal('device', devices[i].id);
+    showTypeModal('device', devices[i].id);
   });
   marker.on('mouseover', function(e) {
     $('#name-box').text(devices[i].name);

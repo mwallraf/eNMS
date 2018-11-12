@@ -12,7 +12,7 @@ from sqlalchemy.ext.mutable import MutableDict
 
 from eNMS.automation.helpers import substitute
 from eNMS.automation.models import Service
-from eNMS.base.models import service_classes
+from eNMS.base.classes import service_classes
 
 
 class RestCallService(Service):
@@ -43,7 +43,7 @@ class RestCallService(Service):
     }
 
     __mapper_args__ = {
-        'polymorphic_identity': 'rest_call_service',
+        'polymorphic_identity': 'RestCallService',
     }
 
     def job(self, *args):
@@ -63,10 +63,10 @@ class RestCallService(Service):
             ).content)
         match = substitute(self.content_match, locals())
         success = (
-            self.content_match_regex and search(match, str(result))
+            self.content_match_regex and bool(search(match, str(result)))
             or match in str(result) and not self.content_match_regex
         )
         return {'success': success, 'result': result, 'url': rest_url}
 
 
-service_classes['rest_call_service'] = RestCallService
+service_classes['RestCallService'] = RestCallService

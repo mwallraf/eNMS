@@ -10,12 +10,24 @@
   <div class="right_col" role="main">
     <div class="row">
       <div class="col-md-6 col-xs-12">
-        <div class="x_panel">
+        <div class="x_panel" style="min-height: 450px">
           <div class="x_title">
             <h4 class="text-center">Import / Export Topology</h4>
           </div>
-          <div class="x_content" style="min-height: 450px">
+          <div class="x_content">
             <form id="import-form" class="form-horizontal form-label-left" enctype="multipart/form-data" method="post">
+              <fieldset>
+                <div class="item">
+                  <input id="replace" name="replace" type="checkbox" value="y" checked>
+                  <label>Replace Existing Topology</label>
+                </div>
+              </fieldset>
+              <fieldset>
+                <div class="item">
+                  <input id="update-pools" name="update-pools" type="checkbox" value="y" checked>
+                  <label>Update Pools after Import</label>
+                </div>
+              </fieldset>
               <label class="btn btn-default btn-file" style="width:100%;">Import Network Topology
                 <input id="file" name="file" style="visibility:hidden; display:none" type="file">
               </label>
@@ -30,50 +42,15 @@
           </div>
         </div>
       </div>
-      <div class="col-md-6 col-xs-12">
-        <div class="x_panel">
-          <div class="x_title">
-            <h4 class="text-center">Import / Export (Migration)</h4>
-          </div>
-          <div class="x_content" style="min-height: 450px">
-            <form id="import-export-form" data-parsley-validate class="form-horizontal form-label-left" method="post">
-              <div>
-                <label>
-                  Directory pathname to use in eNMS_HOME/migrations/import_export :<br>
-                  Example: "10312018_backup"
-                </label>
-                <div class="form-group">
-                  {{ import_export_form.name(class="form-control required") }}
-                </div>
-              </div>
-              <div>
-                <label>eNMS object types to include in Import / Export :</label>
-                <div class="form-group">
-                  {{ import_export_form.export(class="form-control required", size="10") }}
-                </div>
-              </div>
-            </form>
-            <div class="ln_solid"></div>
-            <div class="form-group">
-              <div class="col-md-e col-sm-9 col-xs-12 col-md-offset-5">
-                <button type="button" class="btn btn-success" onclick="migrationImport()">Import</button>
-                <button type="button" class="btn btn-success" onclick="migrationExport()">Export</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div class="row">
       <div class="col-md-6 col-xs-6">
-        <div class="x_panel">
+        <div class="x_panel" style="min-height: 450px">
           <div class="x_title">
             <h4 class="text-center">OpenNMS import</h4>
           </div>
           <div class="x_content">
             <br>
             <form id="opennms_form" data-parsley-validate class="form-horizontal form-label-left" method="post" autocomplete="off">
-              <div class="form-group" style="height: 450px">
+              <div class="form-group">
                 {% for field in opennms_form if field.widget.input_type != 'hidden'  %}
                   <label class="control-label col-md-4 col-sm-4 col-xs-12">{{ field.label }}</label>
                   <div class="col-md-8 col-sm-8 col-xs-12">
@@ -83,24 +60,26 @@
               </div>
               <div class="ln_solid"></div>
               <div class="form-group">
-                <div class="col-md-9 col-sm-9 col-xs-12 col-md-offset-3">
+                <div class="col-md-9 col-sm-9 col-xs-12 col-md-offset-5">
                   <button class="btn btn-primary" type="reset">Reset</button>
-                  <button type="button" class="btn btn-success" onclick="queryOpenNMS()">Retrieve devices</button>
+                  <button type="button" class="btn btn-success" onclick="queryOpenNMS()">Import</button>
                 </div>
               </div>
             </form>
           </div>
         </div>
       </div>
+    </div>
+    <div class="row">
       <div class="col-md-6 col-xs-6">
-        <div class="x_panel">
+        <div class="x_panel" style="min-height: 450px">
           <div class="x_title">
             <h4 class="text-center">Netbox import</h4>
           </div>
           <div class="x_content">
             <br>
             <form id="netbox_form" data-parsley-validate class="form-horizontal form-label-left" method="post" autocomplete="off">
-              <div class="form-group" style="height: 450px">
+              <div class="form-group">
                 {% for field in netbox_form if field.widget.input_type != 'hidden'  %}
                   <label class="control-label col-md-4 col-sm-4 col-xs-12">{{ field.label }}</label>
                   <div class="col-md-8 col-sm-8 col-xs-12">
@@ -110,9 +89,31 @@
               </div>
               <div class="ln_solid"></div>
               <div class="form-group">
-                <div class="col-md-9 col-sm-9 col-xs-12 col-md-offset-3">
+                <div class="col-md-9 col-sm-9 col-xs-12 col-md-offset-5">
                   <button class="btn btn-primary" type="reset">Reset</button>
-                  <button type="button" class="btn btn-success" onclick="queryNetbox()">Retrieve devices</button>
+                  <button type="button" class="btn btn-success" onclick="queryNetbox()">Import</button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-6 col-xs-6">
+        <div class="x_panel" style="min-height: 450px">
+          <div class="x_title">
+            <h4 class="text-center">LibreNMS import</h4>
+          </div>
+          <div class="x_content">
+            <br>
+            <form id="librenms_form" data-parsley-validate class="form-horizontal form-label-left" method="post" autocomplete="off">
+              <div class="form-group">
+                TODO
+              </div>
+              <div class="ln_solid"></div>
+              <div class="form-group">
+                <div class="col-md-9 col-sm-9 col-xs-12 col-md-offset-5">
+                  <button class="btn btn-primary" type="reset">Reset</button>
+                  <button type="button" class="btn btn-success" onclick="queryOpenNMS()">Import</button>
                 </div>
               </div>
             </form>

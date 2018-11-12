@@ -14,13 +14,13 @@ from eNMS.base.associations import (
 )
 from eNMS.base.helpers import fetch
 from eNMS.base.models import Base
-from eNMS.base.properties import cls_to_properties, service_properties
 
 
 class Job(Base):
 
     __tablename__ = 'Job'
-
+    type = Column(String)
+    __mapper_args__ = {'polymorphic_identity': 'Job', 'polymorphic_on': type}
     id = Column(Integer, primary_key=True)
     hidden = Column(Boolean, default=False)
     name = Column(String, unique=True)
@@ -29,10 +29,9 @@ class Job(Base):
     time_between_retries = Column(Integer, default=10)
     positions = Column(MutableDict.as_mutable(PickleType), default={})
     logs = Column(MutableDict.as_mutable(PickleType), default={})
-    state = Column(String, default='Idle')
-    status = Column(MutableDict.as_mutable(PickleType), default={})
+    status = Column(String, default='Idle')
+    state = Column(MutableDict.as_mutable(PickleType), default={})
     tasks = relationship('Task', back_populates='job', cascade='all,delete')
-    type = Column(String)
     vendor = Column(String)
     operating_system = Column(String)
     waiting_time = Column(Integer, default=0)
@@ -57,13 +56,11 @@ class Job(Base):
         back_populates='jobs'
     )
     send_notification = Column(Boolean, default=False)
-    send_notification_method = Column(String)
+    send_notification_method = Column(
+        String,
+        default='mail_feedback_notification'
+    )
     mail_recipient = Column(String)
-
-    __mapper_args__ = {
-        'polymorphic_identity': 'Job',
-        'polymorphic_on': type
-    }
 
     def compute_targets(self):
         targets = set(self.devices)
@@ -71,22 +68,22 @@ class Job(Base):
             targets |= set(pool.devices)
         return targets
 
-    def job_sources(self, workflow, type='all'):
+    def job_sources(self, workflow, subtype='all'):
         return [
             x.source for x in self.sources
-            if (type == 'all' or x.type == type)
+            if (subtype == 'all' or x.subtype == subtype)
             and x.workflow == workflow
         ]
 
-    def job_successors(self, workflow, type='all'):
+    def job_successors(self, workflow, subtype='all'):
         return [
             x.destination for x in self.destinations
-            if (type == 'all' or x.type == type)
+            if (subtype == 'all' or x.subtype == subtype)
             and x.workflow == workflow
         ]
 
     def try_run(self, payload=None, remaining_targets=None):
-        failed_attempts = {}
+        failed_attempts, now = {}, str(datetime.now()).replace(' ', '-')
         for i in range(self.number_of_retries + 1):
             results, remaining_targets = self.run(payload, remaining_targets)
             if results['success']:
@@ -95,8 +92,8 @@ class Job(Base):
                 failed_attempts[f'Attempts {i + 1}'] = results
                 sleep(self.time_between_retries)
         results['failed_attempts'] = failed_attempts
-        self.logs[str(datetime.now())] = results
-        return results
+        self.logs[now] = results
+        return results, now
 
     def get_results(self, payload, device=None):
         try:
@@ -140,43 +137,16 @@ class Job(Base):
 class Service(Job):
 
     __tablename__ = 'Service'
-
     id = Column(Integer, ForeignKey('Job.id'), primary_key=True)
-    private = {'id'}
-
-    __mapper_args__ = {
-        'polymorphic_identity': 'service',
-    }
-
-    @property
-    def properties(self):
-        prop = {p: getattr(self, p) for p in cls_to_properties['Service']}
-        for property in service_properties[self.type]:
-            prop[property] = getattr(self, property)
-        return prop
-
-    @property
-    def column_values(self):
-        serialized_object = self.properties
-        for col in self.__table__.columns:
-            value = getattr(self, col.key)
-            serialized_object[col.key] = value
-        serialized_object['devices'] = [
-            obj.properties for obj in getattr(self, 'devices')
-        ]
-        serialized_object['pools'] = [
-            obj.properties for obj in getattr(self, 'pools')
-        ]
-        return serialized_object
+    __mapper_args__ = {'polymorphic_identity': 'Service'}
 
 
 class WorkflowEdge(Base):
 
-    __tablename__ = 'WorkflowEdge'
-
+    __tablename__ = type = 'WorkflowEdge'
     id = Column(Integer, primary_key=True)
     name = Column(String)
-    type = Column(Boolean)
+    subtype = Column(Boolean)
     source_id = Column(Integer, ForeignKey('Job.id'))
     source = relationship(
         'Job',
@@ -202,7 +172,7 @@ class WorkflowEdge(Base):
 class Workflow(Job):
 
     __tablename__ = 'Workflow'
-
+    __mapper_args__ = {'polymorphic_identity': 'Workflow'}
     id = Column(Integer, ForeignKey('Job.id'), primary_key=True)
     multiprocessing = Column(Boolean, default=False)
     jobs = relationship(
@@ -212,10 +182,6 @@ class Workflow(Job):
     )
     edges = relationship('WorkflowEdge', back_populates='workflow')
 
-    __mapper_args__ = {
-        'polymorphic_identity': 'workflow',
-    }
-
     def __init__(self, **kwargs):
         default = [fetch('Service', name='Start'), fetch('Service', name='End')]
         self.jobs.extend(default)
@@ -224,9 +190,9 @@ class Workflow(Job):
     def job(self, *args):
         device, payload = args if len(args) == 2 else (None, args)
         if not self.multiprocessing:
-            self.status = {'jobs': {}}
+            self.state = {'jobs': {}}
             if device:
-                self.status['current_device'] = device.name
+                self.state['current_device'] = device.name
             db.session.commit()
         jobs, visited = [self.jobs[0]], set()
         results = {'success': False}
@@ -238,12 +204,12 @@ class Workflow(Job):
                 continue
             visited.add(job)
             if not self.multiprocessing:
-                self.status['current_job'] = job.serialized
+                self.state['current_job'] = job.get_properties()
                 db.session.commit()
-            job_results = job.try_run(results, {device} if device else None)
+            job_results, _ = job.try_run(results, {device} if device else None)
             success = job_results['success']
             if not self.multiprocessing:
-                self.status['jobs'][job.id] = success
+                self.state['jobs'][job.id] = success
                 db.session.commit()
             for successor in job.job_successors(self, success):
                 if successor not in visited:
@@ -252,7 +218,4 @@ class Workflow(Job):
                     results['success'] = True
             results[job.name] = job_results
             sleep(job.waiting_time)
-        if not self.multiprocessing:
-            self.status['current_job'] = None
-            db.session.commit()
         return results
