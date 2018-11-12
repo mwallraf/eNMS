@@ -8,6 +8,7 @@ from hvac import Client as VaultClient
 from importlib import import_module
 from logging import basicConfig, DEBUG, info, StreamHandler
 from logging.handlers import RotatingFileHandler
+from eNMS.contrib.themes import apply_themes
 from os import environ
 
 auth = HTTPBasicAuth()
@@ -136,6 +137,7 @@ def create_app(path, config):
     configure_rest_api(app)
     configure_logs(app)
     configure_errors(app)
+    apply_themes(app)
     if use_vault:
         configure_vault_client(app)
     info('eNMS starting')
