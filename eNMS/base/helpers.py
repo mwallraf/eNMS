@@ -7,6 +7,7 @@ from eNMS import db
 from eNMS.base.classes import classes
 from eNMS.base.properties import (
     boolean_properties,
+    list_properties,
     pretty_names,
     property_types
 )
@@ -100,9 +101,11 @@ def integrity_rollback(function):
 def process_request(function):
     def wrapper(*a, **kw):
         data = request.form.to_dict()
-        for key in request.form:
-            if 'list' in property_types.get(key, ''):
-                data[key] = request.form.getlist(key)
+        for property in list_properties:
+            if property in request.form:
+                data[property] = request.form.getlist(property)
+            else:
+                data[property] = []
         for property in boolean_properties:
             if property not in request.form:
                 data[property] = 'off'
@@ -161,13 +164,13 @@ def post(blueprint, url, permission=None):
         @wraps(func)
         @process_request
         def inner(*args, **kwargs):
-            try:
-                return func(*args, **kwargs)
-            except Exception as e:
-                error = str(e)
-                if error == 'Expecting value: line 1 column 1 (char 0)':
-                    error = 'Invalid syntax for dictionnary input.'
-                return jsonify({'failure': True, 'error': error})
+            # try:
+            return func(*args, **kwargs)
+            # except Exception as e:
+            #     error = str(e)
+            #     if error == 'Expecting value: line 1 column 1 (char 0)':
+            #         error = 'Invalid syntax for dictionnary input.'
+            #     return jsonify({'failure': True, 'error': error})
         return inner
     return outer
 
